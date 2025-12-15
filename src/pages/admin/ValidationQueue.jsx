@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { activityApi } from "../../api/activityApi";
 import { Table } from "../../components/Table";
 import { Button } from "../../components/Button";
-import { useNavigate } from "react-router-dom";
 import { formatDate } from "../../utils/formatDate";
 
 const ValidationQueue = () => {
@@ -24,31 +24,31 @@ const ValidationQueue = () => {
   ];
 
   return (
-    <>
-      <div className="topbar">
-        <div>
-          <div className="topbar-title">Antrian Validasi</div>
-          <div className="page-description">
-            Daftar aktivitas yang menunggu persetujuan.
-          </div>
-        </div>
+    <div className="space-y-6">
+      {/* ================= HEADER ================= */}
+      <div>
+        <h1 className="text-xl font-semibold text-gray-800">
+          Antrian Validasi
+        </h1>
+        <p className="text-sm text-gray-600">
+          Daftar aktivitas yang menunggu persetujuan.
+        </p>
       </div>
 
-      <div className="card">
-        <Table
-          columns={columns}
-          data={data}
-          renderActions={(row) => (
-            <Button
-              variant="secondary"
-              onClick={() => navigate(`/admin/validation/${row.id}`)}
-            >
-              Review
-            </Button>
-          )}
-        />
-      </div>
-    </>
+      {/* ================= TABLE ================= */}
+      <Table
+        columns={columns}
+        data={data}
+        renderActions={(row) => (
+          <Button
+            variant="secondary"
+            onClick={() => navigate(`/admin/validation/${row.id}`)}
+          >
+            Review
+          </Button>
+        )}
+      />
+    </div>
   );
 };
 

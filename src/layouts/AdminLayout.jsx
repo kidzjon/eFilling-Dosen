@@ -1,38 +1,69 @@
 import React from "react";
-import { NavLink, Outlet } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
+import { logout } from "../store/authSlice";
 
 export const AdminLayout = () => {
   const user = useSelector((s) => s.auth.user);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate("/login");
+  };
+
+  const navBase = "block px-4 py-2 rounded-lg text-sm font-medium transition";
+  const navIdle = "text-slate-200 hover:bg-slate-700";
+  const navActive = "bg-primary text-white";
 
   return (
-    <div className="layout-root">
-      <aside className="sidebar" style={{ background: "#0f172a" }}>
-        <div className="sidebar-title">Admin eFilling</div>
-        <div style={{ fontSize: "0.8rem", opacity: 0.85 }}>
-          {user?.name} – Admin
+    <div className="min-h-screen flex bg-background">
+      {/* ================= SIDEBAR ================= */}
+      <aside className="w-64 bg-slate-900 text-slate-100 flex flex-col">
+        {/* Brand & User */}
+        <div className="px-5 py-4 border-b border-slate-700">
+          <h1 className="text-lg font-semibold">Admin eFilling</h1>
+          <p className="text-xs text-slate-400 mt-1">
+            {user?.name || "User"} – Admin
+          </p>
         </div>
-        <nav className="sidebar-nav">
+
+        {/* Navigation */}
+        <nav className="flex-1 px-3 py-4 space-y-1">
           <NavLink
             to="/admin"
             end
             className={({ isActive }) =>
-              "sidebar-link" + (isActive ? " active" : "")
+              `${navBase} ${isActive ? navActive : navIdle}`
             }
           >
             Dashboard
           </NavLink>
+
           <NavLink
             to="/admin/validation"
             className={({ isActive }) =>
-              "sidebar-link" + (isActive ? " active" : "")
+              `${navBase} ${isActive ? navActive : navIdle}`
             }
           >
             Validasi
           </NavLink>
         </nav>
+
+        {/* Logout */}
+        <div className="px-3 py-3 border-t border-slate-700">
+          <button
+            onClick={handleLogout}
+            className="w-full text-left px-4 py-2 rounded-lg text-sm font-medium text-red-400 hover:bg-red-900/20 transition"
+          >
+            Keluar
+          </button>
+        </div>
       </aside>
-      <main className="main-content">
+
+      {/* ================= MAIN CONTENT ================= */}
+      <main className="flex-1 p-6">
         <Outlet />
       </main>
     </div>

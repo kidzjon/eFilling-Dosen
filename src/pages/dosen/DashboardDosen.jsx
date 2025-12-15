@@ -1,56 +1,80 @@
 import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { activityApi } from "../../api/activityApi";
 import { Button } from "../../components/Button";
-import { useNavigate } from "react-router-dom";
 
 const DashboardDosen = () => {
   const user = useSelector((s) => s.auth.user);
-  const [stats, setStats] = useState({ pending: 0, approved: 0, rejected: 0 });
   const navigate = useNavigate();
+
+  const [stats, setStats] = useState({
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+  });
 
   useEffect(() => {
     if (!user) return;
+
     activityApi.getByDosen(user.id).then((res) => {
-      const s = { pending: 0, approved: 0, rejected: 0 };
+      const summary = { pending: 0, approved: 0, rejected: 0 };
+
       res.forEach((a) => {
-        if (a.status === "pending") s.pending++;
-        if (a.status === "approved") s.approved++;
-        if (a.status === "rejected") s.rejected++;
+        if (a.status === "pending") summary.pending++;
+        if (a.status === "approved") summary.approved++;
+        if (a.status === "rejected") summary.rejected++;
       });
-      setStats(s);
+
+      setStats(summary);
     });
   }, [user]);
 
   return (
-    <>
-      <div className="topbar">
+    <div className="space-y-6">
+      {/* ================= HEADER ================= */}
+      <div className="flex items-center justify-between">
         <div>
-          <div className="topbar-title">Dashboard Dosen</div>
-          <div className="page-description">
+          <h1 className="text-xl font-semibold text-gray-800">
+            Dashboard Dosen
+          </h1>
+          <p className="text-sm text-gray-600">
             Ringkasan aktivitas dan status validasi.
-          </div>
+          </p>
         </div>
+
         <Button onClick={() => navigate("/dosen/activities/new")}>
           + Tambah Aktivitas
         </Button>
       </div>
 
-      <div className="cards-grid">
-        <div className="card">
-          <div>Status Pending</div>
-          <h2>{stats.pending}</h2>
+      {/* ================= STATS CARDS ================= */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Pending */}
+        <div className="bg-white rounded-xl shadow p-5">
+          <p className="text-sm text-gray-600">Status Pending</p>
+          <h2 className="mt-2 text-3xl font-bold text-warning">
+            {stats.pending}
+          </h2>
         </div>
-        <div className="card">
-          <div>Disetujui</div>
-          <h2>{stats.approved}</h2>
+
+        {/* Approved */}
+        <div className="bg-white rounded-xl shadow p-5">
+          <p className="text-sm text-gray-600">Disetujui</p>
+          <h2 className="mt-2 text-3xl font-bold text-success">
+            {stats.approved}
+          </h2>
         </div>
-        <div className="card">
-          <div>Ditolak</div>
-          <h2>{stats.rejected}</h2>
+
+        {/* Rejected */}
+        <div className="bg-white rounded-xl shadow p-5">
+          <p className="text-sm text-gray-600">Ditolak</p>
+          <h2 className="mt-2 text-3xl font-bold text-danger">
+            {stats.rejected}
+          </h2>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

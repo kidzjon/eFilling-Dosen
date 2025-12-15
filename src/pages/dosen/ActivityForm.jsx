@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import { activityApi } from "../../api/activityApi";
 import { ACTIVITY_TYPES } from "../../utils/constants";
 import { validateActivity } from "../../utils/validators";
 import { Input } from "../../components/Input";
 import { FileUpload } from "../../components/FileUpload";
 import { Button } from "../../components/Button";
-import { useSelector } from "react-redux";
 
 const ActivityForm = () => {
   const { id } = useParams();
   const isEdit = Boolean(id);
+  const navigate = useNavigate();
+  const user = useSelector((s) => s.auth.user);
+
   const [values, setValues] = useState({
     title: "",
     description: "",
@@ -18,11 +21,10 @@ const ActivityForm = () => {
     date: "",
     sks: "",
   });
+
   const [file, setFile] = useState(null);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const user = useSelector((s) => s.auth.user);
-  const navigate = useNavigate();
 
   useEffect(() => {
     if (isEdit) {
@@ -38,11 +40,13 @@ const ActivityForm = () => {
     }
   }, [id, isEdit]);
 
-  const handleChange = (key) => (e) =>
+  const handleChange = (key) => (e) => {
     setValues((v) => ({ ...v, [key]: e.target.value }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     const vErrors = validateActivity(values);
     setErrors(vErrors);
     if (Object.keys(vErrors).length > 0) return;
@@ -57,8 +61,11 @@ const ActivityForm = () => {
         fileName: file?.name || null,
       };
 
-      if (isEdit) await activityApi.update(id, payload);
-      else await activityApi.create(payload);
+      if (isEdit) {
+        await activityApi.update(id, payload);
+      } else {
+        await activityApi.create(payload);
+      }
 
       navigate("/dosen/activities");
     } catch (err) {
@@ -70,48 +77,51 @@ const ActivityForm = () => {
   };
 
   return (
-    <>
-      <div className="topbar">
-        <div>
-          <div className="topbar-title">
-            {isEdit ? "Edit Aktivitas" : "Tambah Aktivitas"}
-          </div>
-          <div className="page-description">
-            Isi data aktivitas dan upload bukti kegiatan.
-          </div>
-        </div>
+    <div className="space-y-6">
+      {/* ================= HEADER ================= */}
+      <div>
+        <h1 className="text-xl font-semibold text-gray-800">
+          {isEdit ? "Edit Aktivitas" : "Tambah Aktivitas"}
+        </h1>
+        <p className="text-sm text-gray-600">
+          Isi data aktivitas dan upload bukti kegiatan.
+        </p>
       </div>
 
-      <div className="card" style={{ maxWidth: 640 }}>
-        <form onSubmit={handleSubmit}>
+      {/* ================= FORM CARD ================= */}
+      <div className="bg-white rounded-xl shadow p-6 max-w-3xl">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <Input
             label="Judul"
             value={values.title}
             onChange={handleChange("title")}
             error={errors.title}
           />
+
           <Input
             label="Deskripsi"
             as="textarea"
+            rows={3}
             value={values.description}
             onChange={handleChange("description")}
           />
-          <div className="form-field">
-            <label className="form-label">Jenis Aktivitas</label>
-            <select
-              className="form-select"
-              value={values.type}
-              onChange={handleChange("type")}
-            >
-              <option value="">Pilih jenis...</option>
-              {ACTIVITY_TYPES.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-            {errors.type && <div className="form-error">{errors.type}</div>}
-          </div>
+
+          {/* Jenis Aktivitas */}
+          <Input
+            label="Jenis Aktivitas"
+            as="select"
+            value={values.type}
+            onChange={handleChange("type")}
+            error={errors.type}
+          >
+            <option value="">Pilih jenis...</option>
+            {ACTIVITY_TYPES.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </Input>
+
           <Input
             label="Tanggal"
             type="date"
@@ -119,6 +129,7 @@ const ActivityForm = () => {
             onChange={handleChange("date")}
             error={errors.date}
           />
+
           <Input
             label="SKS"
             type="number"
@@ -126,11 +137,19 @@ const ActivityForm = () => {
             onChange={handleChange("sks")}
             error={errors.sks}
           />
-          <FileUpload label="Upload Bukti (PDF/Gambar)" onChange={setFile} />
-          <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.5rem" }}>
+
+          <FileUpload
+            label="Upload Bukti (PDF / Gambar)"
+            accept=".pdf,.jpg,.jpeg,.png"
+            onChange={setFile}
+          />
+
+          {/* ================= ACTIONS ================= */}
+          <div className="flex gap-2 pt-2">
             <Button type="submit" disabled={loading}>
               {loading ? "Menyimpan..." : "Simpan & Ajukan"}
             </Button>
+
             <Button
               type="button"
               variant="ghost"
@@ -141,7 +160,7 @@ const ActivityForm = () => {
           </div>
         </form>
       </div>
-    </>
+    </div>
   );
 };
 

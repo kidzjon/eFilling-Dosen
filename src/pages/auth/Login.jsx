@@ -2,8 +2,6 @@ import React, { useState } from "react";
 import { useDispatch } from "react-redux";
 import { loginSuccess } from "../../store/authSlice";
 import { useNavigate } from "react-router-dom";
-import { Button } from "../../components/Button";
-import { Input } from "../../components/Input";
 
 const Login = () => {
   const [form, setForm] = useState({
@@ -11,11 +9,12 @@ const Login = () => {
     name: "",
     role: "dosen",
   });
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const handleChange = (key) => (e) => {
-    setForm((f) => ({ ...f, [key]: e.target.value }));
+    setForm((prev) => ({ ...prev, [key]: e.target.value }));
   };
 
   const handleSubmit = (e) => {
@@ -36,51 +35,61 @@ const Login = () => {
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "linear-gradient(135deg, #1a56db 0%, #0e9f6e 100%)",
-      }}
-    >
-      <div
-        className="card"
-        style={{ maxWidth: 420, width: "100%", padding: "1.5rem 1.75rem" }}
-      >
-        <h2 style={{ marginBottom: "0.5rem" }}>Login eFilling Dosen</h2>
-        <p className="page-description">
-          Gunakan role untuk testing: <b>dosen, admin, pimpinan</b>.
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary to-success px-4">
+      <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-7">
+        <h2 className="text-2xl font-semibold mb-1">Login eFilling Dosen</h2>
+        <p className="text-sm text-gray-500 mb-6">
+          Gunakan role untuk testing:{" "}
+          <span className="font-medium">dosen, admin, pimpinan</span>
         </p>
-        <form onSubmit={handleSubmit}>
-          <Input
-            label="Nama"
-            value={form.name}
-            onChange={handleChange("name")}
-            placeholder="Nama lengkap"
-          />
-          <Input
-            label="Email"
-            value={form.email}
-            onChange={handleChange("email")}
-            placeholder="email@kampus.ac.id"
-          />
-          <div className="form-field">
-            <label className="form-label">Role</label>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Nama */}
+          <div>
+            <label className="block text-sm font-medium mb-1">Nama</label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={handleChange("name")}
+              placeholder="Nama lengkap"
+              className="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          {/* Email */}
+          <div>
+            <label className="block text-sm font-medium mb-1">Email</label>
+            <input
+              type="email"
+              value={form.email}
+              onChange={handleChange("email")}
+              placeholder="email@kampus.ac.id"
+              required
+              className="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          {/* Role */}
+          <div>
+            <label className="block text-sm font-medium mb-1">Role</label>
             <select
-              className="form-select"
               value={form.role}
               onChange={handleChange("role")}
+              className="w-full rounded-lg border px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="dosen">Dosen</option>
               <option value="admin">Admin</option>
               <option value="pimpinan">Pimpinan</option>
             </select>
           </div>
-          <Button type="submit" style={{ width: "100%", marginTop: "0.5rem" }}>
+
+          {/* Submit */}
+          <button
+            type="submit"
+            className="w-full bg-primary text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 transition"
+          >
             Masuk
-          </Button>
+          </button>
         </form>
       </div>
     </div>

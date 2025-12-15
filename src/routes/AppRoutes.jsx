@@ -1,9 +1,12 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
+
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
+
 import { ProtectedRoute } from "./ProtectedRoute";
 import { RoleRoute } from "./RoleRoute";
+
 import { DosenLayout } from "../layouts/DosenLayout";
 import { AdminLayout } from "../layouts/AdminLayout";
 import { PimpinanLayout } from "../layouts/PimpinanLayout";
@@ -23,11 +26,11 @@ import ReportAnalytics from "../pages/pimpinan/ReportAnalytics";
 export const AppRoutes = () => {
   return (
     <Routes>
-      {/* Public */}
+      {/* PUBLIC */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* Dosen */}
+      {/* DOSEN */}
       <Route
         path="/dosen"
         element={
@@ -45,7 +48,7 @@ export const AppRoutes = () => {
         <Route path="activities/:id/edit" element={<ActivityForm />} />
       </Route>
 
-      {/* Admin */}
+      {/* ADMIN */}
       <Route
         path="/admin"
         element={
@@ -61,7 +64,7 @@ export const AppRoutes = () => {
         <Route path="validation/:id" element={<ValidationDetail />} />
       </Route>
 
-      {/* Pimpinan */}
+      {/* PIMPINAN */}
       <Route
         path="/pimpinan"
         element={
@@ -76,7 +79,7 @@ export const AppRoutes = () => {
         <Route path="analytics" element={<ReportAnalytics />} />
       </Route>
 
-      {/* Default */}
+      {/* DEFAULT */}
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
