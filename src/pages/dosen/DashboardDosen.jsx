@@ -14,22 +14,6 @@ const DashboardDosen = () => {
     rejected: 0,
   });
 
-  useEffect(() => {
-    if (!user) return;
-
-    activityApi.getByDosen(user.id).then((res) => {
-      const summary = { pending: 0, approved: 0, rejected: 0 };
-
-      res.forEach((a) => {
-        if (a.status === "pending") summary.pending++;
-        if (a.status === "approved") summary.approved++;
-        if (a.status === "rejected") summary.rejected++;
-      });
-
-      setStats(summary);
-    });
-  }, [user]);
-
   return (
     <div className="space-y-6">
       {/* ================= HEADER ================= */}

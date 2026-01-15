@@ -23,7 +23,7 @@ import ValidationDetail from "../pages/admin/ValidationDetail";
 import DashboardPimpinan from "../pages/pimpinan/DashboardPimpinan";
 import ReportAnalytics from "../pages/pimpinan/ReportAnalytics";
 
-export const AppRoutes = () => {
+export default function AppRoutes() {
   return (
     <Routes>
       {/* PUBLIC */}
@@ -82,6 +82,8 @@ export const AppRoutes = () => {
       {/* DEFAULT */}
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="/register" element={<Register />} />
+
     </Routes>
   );
 };

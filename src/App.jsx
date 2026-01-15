@@ -1,6 +1,22 @@
-import React from "react";
-import { AppRoutes } from "./routes/AppRoutes";
+import { useEffect, useState } from "react";
+import { initAuthListener } from "@/services/auth.listener";
+import AppRoutes from "@/routes/AppRoutes";
 
-export default function App() {
+function App() {
+  const [authReady, setAuthReady] = useState(false);
+
+  useEffect(() => {
+    const unsub = initAuthListener(() => {
+      setAuthReady(true);
+    });
+    return () => unsub();
+  }, []);
+
+  if (!authReady) {
+    return <div>Loading...</div>;
+  }
+
   return <AppRoutes />;
 }
+
+export default App;

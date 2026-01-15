@@ -1,17 +1,16 @@
-import React from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { useSelector, useDispatch } from "react-redux";
-import { logout } from "../store/authSlice";
+import { useAuth } from "@/hooks/useAuth";
+import { logout } from "@/services/auth.service";
 
 export const DosenLayout = () => {
-  const user = useSelector((s) => s.auth.user);
-  const dispatch = useDispatch();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    dispatch(logout());
+  const handleLogout = async () => {
+    await logout();
     navigate("/login");
   };
+
 
   const navBase = "block px-4 py-2 rounded-lg text-sm font-medium transition";
   const navIdle = "text-gray-700 hover:bg-gray-100";

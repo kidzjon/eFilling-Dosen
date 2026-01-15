@@ -1,93 +1,62 @@
-// Mock API sederhana menggunakan in-memory data
+import {
+  createSubmission,
+  getMySubmissions,
+  reviewSubmission,
+} from "@/services/submission.service";
 
-let mockActivities = [
-  {
-    id: "1",
-    title: "Mengajar Grafika Komputer",
-    type: "education",
-    date: new Date().toISOString(),
-    sks: 3,
-    status: "approved",
-    submittedBy: "u-dosen-1",
-  },
-  {
-    id: "2",
-    title: "Penelitian MediaPipe Pose",
-    type: "research",
-    date: new Date().toISOString(),
-    sks: 2,
-    status: "pending",
-    submittedBy: "u-dosen-1",
-  },
-];
+import { getCurrentUserProfile } from "@/services/auth.service";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "@/services/firebase";
 
 export const activityApi = {
-  getByDosen(userId) {
-    return new Promise((resolve) => {
-      setTimeout(
-        () =>
-          resolve(mockActivities.filter((a) => a.submittedBy === userId) || []),
-        300
-      );
-    });
+  // ===============================
+  // DOSEN
+  // ===============================
+  async getActivities() {
+    const user = await getCurrentUserProfile();
+    if (!user) return [];
+    return await getMySubmissions(user.uid);
   },
 
-  getById(id) {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const found = mockActivities.find((a) => a.id === id);
-        if (!found) return reject(new Error("Activity not found"));
-        resolve(found);
-      }, 300);
+  async createActivity({ data, file }) {
+    const user = await getCurrentUserProfile();
+    if (!user) throw new Error("Not authenticated");
+
+    await createSubmission({
+      data,
+      file,
+      uid: user.uid,
     });
+
+    return { success: true };
   },
 
-  create(data) {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const newActivity = {
-          ...data,
-          id: Date.now().toString(),
-          status: "pending",
-        };
-        mockActivities.push(newActivity);
-        resolve(newActivity);
-      }, 400);
-    });
-  },
+  // ===============================
+  // ADMIN
+  // ===============================
+  async updateActivityStatus(id, status, notes = "") {
+    const admin = await getCurrentUserProfile();
+    if (!admin) throw new Error("Not authenticated");
 
-  update(id, data) {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const idx = mockActivities.findIndex((a) => a.id === id);
-        if (idx === -1) return reject(new Error("Activity not found"));
-        mockActivities[idx] = { ...mockActivities[idx], ...data };
-        resolve(mockActivities[idx]);
-      }, 400);
+    await reviewSubmission({
+      submissionId: id,
+      status,
+      reviewNotes: notes,
+      adminUid: admin.uid,
     });
-  },
 
-  getPendingForAdmin() {
-    return new Promise((resolve) => {
-      setTimeout(
-        () => resolve(mockActivities.filter((a) => a.status === "pending")),
-        300
-      );
-    });
+    return { success: true };
   },
+    async getByDosen(dosenId) {
+    const q = query(
+      collection(db, "activities"),
+      where("dosenId", "==", dosenId)
+    );
 
-  setStatus(id, status, notes = "") {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const idx = mockActivities.findIndex((a) => a.id === id);
-        if (idx === -1) return reject(new Error("Activity not found"));
-        mockActivities[idx] = {
-          ...mockActivities[idx],
-          status,
-          notes: status === "rejected" ? notes : "",
-        };
-        resolve(mockActivities[idx]);
-      }, 300);
-    });
+    const snap = await getDocs(q);
+    return snap.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
   },
 };

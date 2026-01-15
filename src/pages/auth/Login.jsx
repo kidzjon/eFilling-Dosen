@@ -1,61 +1,61 @@
 import React, { useState } from "react";
-import { useDispatch } from "react-redux";
-import { loginSuccess } from "../../store/authSlice";
 import { useNavigate } from "react-router-dom";
+import { loginWithEmail, loginWithGoogle } from "@/services/auth.service";
+import { auth, db } from "@/services/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 const Login = () => {
   const [form, setForm] = useState({
     email: "",
-    name: "",
-    role: "dosen",
+    password: "",
   });
 
-  const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const handleChange = (key) => (e) => {
     setForm((prev) => ({ ...prev, [key]: e.target.value }));
   };
 
-  const handleSubmit = (e) => {
+  // ✅ HARUS async
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const user = {
-      id: "dummy-" + form.role,
-      email: form.email,
-      name: form.name || "User " + form.role,
-      role: form.role,
-    };
+    try {
+      await loginWithEmail(form.email, form.password);
+      await redirectByRole();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
 
-    dispatch(loginSuccess(user));
+  const handleGoogleLogin = async () => {
+    try {
+      await loginWithGoogle();
+      await redirectByRole();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
 
-    if (form.role === "dosen") navigate("/dosen");
-    else if (form.role === "admin") navigate("/admin");
-    else navigate("/pimpinan");
+  const redirectByRole = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const snap = await getDoc(doc(db, "users", user.uid));
+    const role = snap.data()?.role;
+
+    if (role === "dosen") navigate("/dosen");
+    else if (role === "admin") navigate("/admin");
+    else if (role === "pimpinan") navigate("/pimpinan");
+    else navigate("/login");
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary to-success px-4">
       <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-7">
         <h2 className="text-2xl font-semibold mb-1">Login eFilling Dosen</h2>
-        <p className="text-sm text-gray-500 mb-6">
-          Gunakan role untuk testing:{" "}
-          <span className="font-medium">dosen, admin, pimpinan</span>
-        </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Nama */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Nama</label>
-            <input
-              type="text"
-              value={form.name}
-              onChange={handleChange("name")}
-              placeholder="Nama lengkap"
-              className="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-
           {/* Email */}
           <div>
             <label className="block text-sm font-medium mb-1">Email</label>
@@ -69,18 +69,17 @@ const Login = () => {
             />
           </div>
 
-          {/* Role */}
+          {/* Password */}
           <div>
-            <label className="block text-sm font-medium mb-1">Role</label>
-            <select
-              value={form.role}
-              onChange={handleChange("role")}
-              className="w-full rounded-lg border px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="dosen">Dosen</option>
-              <option value="admin">Admin</option>
-              <option value="pimpinan">Pimpinan</option>
-            </select>
+            <label className="block text-sm font-medium mb-1">Password</label>
+            <input
+              type="password"
+              value={form.password}
+              onChange={handleChange("password")}
+              placeholder="Password"
+              required
+              className="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+            />
           </div>
 
           {/* Submit */}
@@ -90,6 +89,25 @@ const Login = () => {
           >
             Masuk
           </button>
+
+          {/* Google Login */}
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            className="w-full border py-2.5 rounded-lg font-medium mt-2"
+          >
+            Login dengan Google
+          </button>
+
+          {/* Register */}
+          <button
+            type="button"
+            onClick={() => navigate("/register")}
+            className="w-full bg-primary text-white py-2.5 rounded-lg font-medium"
+          >
+            Register
+          </button>
+
         </form>
       </div>
     </div>

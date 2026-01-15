@@ -45,36 +45,21 @@ const ActivityForm = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
+  try {
+    await createActivity({
+      title: form.title,
+      category: form.category,
+      year: form.year,
+      file: form.file,
+      dosen: user
+    });
+    navigate("/dosen/activities");
+  } catch (err) {
+    alert(err.message);
+  }
+};
 
-    const vErrors = validateActivity(values);
-    setErrors(vErrors);
-    if (Object.keys(vErrors).length > 0) return;
-
-    setLoading(true);
-    try {
-      const payload = {
-        ...values,
-        sks: Number(values.sks),
-        submittedBy: user.id,
-        date: values.date,
-        fileName: file?.name || null,
-      };
-
-      if (isEdit) {
-        await activityApi.update(id, payload);
-      } else {
-        await activityApi.create(payload);
-      }
-
-      navigate("/dosen/activities");
-    } catch (err) {
-      console.error(err);
-      alert("Gagal menyimpan data");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="space-y-6">
