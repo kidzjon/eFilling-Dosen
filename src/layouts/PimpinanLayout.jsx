@@ -13,8 +13,9 @@ export const PimpinanLayout = () => {
     navigate("/login");
   };
 
-  const navBase = "block px-4 py-2 rounded-lg text-sm font-medium transition";
-  const navIdle = "text-slate-200 hover:bg-slate-700";
+  const navBase =
+    "flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition";
+  const navIdle = "text-slate-200 hover:bg-slate-700/70";
   const navActive = "bg-primary text-white";
 
   return (
@@ -38,7 +39,22 @@ export const PimpinanLayout = () => {
               `${navBase} ${isActive ? navActive : navIdle}`
             }
           >
-            Ringkasan
+            {/* icon ringkasan (home/dashboard) */}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3 12l9-9 9 9M4 10v10a1 1 0 001 1h5V15a1 1 0 011-1h2a1 1 0 011 1v6h5a1 1 0 001-1V10"
+              />
+            </svg>
+            <span>Ringkasan</span>
           </NavLink>
 
           <NavLink
@@ -47,7 +63,22 @@ export const PimpinanLayout = () => {
               `${navBase} ${isActive ? navActive : navIdle}`
             }
           >
-            Analytics
+            {/* icon analytics (chart) */}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M4 19V5M20 19H4M8 17v-6M12 17V9M16 17v-3"
+              />
+            </svg>
+            <span>Analytics</span>
           </NavLink>
         </nav>
 
@@ -56,13 +87,13 @@ export const PimpinanLayout = () => {
           <button
             onClick={handleLogout}
             className="
-            w-full flex items-center gap-3
-            px-4 py-2.5 rounded-lg
-            text-sm font-semibold
-            text-red-500
-            hover:bg-red-500/10
-            transition
-          "
+              w-full flex items-center gap-3
+              px-4 py-2.5 rounded-lg
+              text-sm font-semibold
+              text-red-500
+              hover:bg-red-500/10
+              transition
+            "
           >
             {/* icon logout */}
             <svg
