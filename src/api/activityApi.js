@@ -5,16 +5,15 @@ import {
 } from "@/services/submission.service";
 
 import { getCurrentUserProfile } from "@/services/auth.service";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import { db } from "@/services/firebase";
 
 export const activityApi = {
   // ===============================
   // DOSEN
   // ===============================
-  async getActivities() {
+  async getByDosen() {
     const user = await getCurrentUserProfile();
-    if (!user) return [];
+    if (!user) throw new Error("Not authenticated");
+
     return await getMySubmissions(user.uid);
   },
 
@@ -46,17 +45,5 @@ export const activityApi = {
     });
 
     return { success: true };
-  },
-    async getByDosen(dosenId) {
-    const q = query(
-      collection(db, "activities"),
-      where("dosenId", "==", dosenId)
-    );
-
-    const snap = await getDocs(q);
-    return snap.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
   },
 };

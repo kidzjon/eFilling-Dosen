@@ -1,72 +1,62 @@
-import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
-import { activityApi } from "../../api/activityApi";
-import { ACTIVITY_TYPES } from "../../utils/constants";
-import { validateActivity } from "../../utils/validators";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { createActivity } from "@/services/activity.service";
+import { useAuth } from "@/hooks/useAuth";
+
 import { Input } from "../../components/Input";
 import { FileUpload } from "../../components/FileUpload";
 import { Button } from "../../components/Button";
+import { ACTIVITY_TYPES } from "../../utils/constants";
 
 const ActivityForm = () => {
-  const { id } = useParams();
-  const isEdit = Boolean(id);
   const navigate = useNavigate();
-  const user = useSelector((s) => s.auth.user);
+  const { user } = useAuth(); // ✅ SOURCE OF TRUTH
 
   const [values, setValues] = useState({
     title: "",
-    description: "",
-    type: "",
-    date: "",
-    sks: "",
+    category: "",
+    year: "",
   });
 
   const [file, setFile] = useState(null);
-  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (isEdit) {
-      activityApi.getById(id).then((a) => {
-        setValues({
-          title: a.title,
-          description: a.description || "",
-          type: a.type,
-          date: a.date.slice(0, 10),
-          sks: a.sks,
-        });
-      });
-    }
-  }, [id, isEdit]);
 
   const handleChange = (key) => (e) => {
     setValues((v) => ({ ...v, [key]: e.target.value }));
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  try {
-    await createActivity({
-      title: form.title,
-      category: form.category,
-      year: form.year,
-      file: form.file,
-      dosen: user
-    });
-    navigate("/dosen/activities");
-  } catch (err) {
-    alert(err.message);
-  }
-};
+    e.preventDefault();
 
+    if (!file) {
+      alert("File wajib diupload");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await createActivity({
+        title: values.title,
+        category: values.category,
+        year: Number(values.year),
+        file,
+        dosen: user,
+      });
+
+      navigate("/dosen/activities");
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
       {/* ================= HEADER ================= */}
       <div>
         <h1 className="text-xl font-semibold text-gray-800">
-          {isEdit ? "Edit Aktivitas" : "Tambah Aktivitas"}
+          Tambah Aktivitas Baru
         </h1>
         <p className="text-sm text-gray-600">
           Isi data aktivitas dan upload bukti kegiatan.
@@ -80,7 +70,7 @@ const ActivityForm = () => {
             label="Judul"
             value={values.title}
             onChange={handleChange("title")}
-            error={errors.title}
+            required
           />
 
           <Input
@@ -97,7 +87,7 @@ const ActivityForm = () => {
             as="select"
             value={values.type}
             onChange={handleChange("type")}
-            error={errors.type}
+            required
           >
             <option value="">Pilih jenis...</option>
             {ACTIVITY_TYPES.map((t) => (
@@ -112,7 +102,7 @@ const ActivityForm = () => {
             type="date"
             value={values.date}
             onChange={handleChange("date")}
-            error={errors.date}
+            required
           />
 
           <Input
@@ -120,7 +110,7 @@ const ActivityForm = () => {
             type="number"
             value={values.sks}
             onChange={handleChange("sks")}
-            error={errors.sks}
+            required
           />
 
           <FileUpload
@@ -130,6 +120,7 @@ const ActivityForm = () => {
           />
 
           {/* ================= ACTIONS ================= */}
+
           <div className="flex gap-2 pt-2">
             <Button type="submit" disabled={loading}>
               {loading ? "Menyimpan..." : "Simpan & Ajukan"}

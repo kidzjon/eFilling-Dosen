@@ -7,6 +7,7 @@ import {
   where,
   getDocs,
   serverTimestamp,
+  orderBy 
 } from "firebase/firestore";
 
 import { db } from "./firebase";
@@ -31,7 +32,7 @@ export async function createSubmission({ data, file, uid }) {
   });
 
   // 3. update submission with file
-  await updateDoc(doc(db, "submissions", ref.id), {
+  await updateDoc(doc(db, "activities", ref.id), {
     file: fileMeta,
   });
 
@@ -40,12 +41,17 @@ export async function createSubmission({ data, file, uid }) {
 
 export async function getMySubmissions(uid) {
   const q = query(
-    collection(db, "submissions"),
-    where("submittedBy", "==", uid)
+    collection(db, "activities"),
+    where("dosenId", "==", uid),
+    orderBy("createdAt", "desc")
   );
 
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+  return snap.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
 }
 export async function reviewSubmission({
   submissionId,
@@ -53,7 +59,7 @@ export async function reviewSubmission({
   reviewNotes,
   adminUid,
 }) {
-  await updateDoc(doc(db, "submissions", submissionId), {
+  await updateDoc(doc(db, "activities", submissionId), {
     status,
     reviewNotes,
     reviewedBy: adminUid,

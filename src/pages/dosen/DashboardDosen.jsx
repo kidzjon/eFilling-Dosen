@@ -14,9 +14,38 @@ const DashboardDosen = () => {
     rejected: 0,
   });
 
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const activities = await activityApi.getByDosen();
+
+        console.log("ACTIVITIES FOR DASHBOARD:", activities);
+
+        const result = {
+          pending: 0,
+          approved: 0,
+          rejected: 0,
+        };
+
+        activities.forEach((a) => {
+          if (a.status === "approved") result.approved++;
+          else if (a.status === "rejected") result.rejected++;
+          else if (a.status === "pending") result.pending++;
+        });
+
+        setStats(result);
+      } catch (err) {
+        console.error("Failed to load dashboard stats:", err);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
+
   return (
     <div className="space-y-6">
-      {/* ================= HEADER ================= */}
+      {/* HEADER */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-gray-800">
@@ -32,9 +61,8 @@ const DashboardDosen = () => {
         </Button>
       </div>
 
-      {/* ================= STATS CARDS ================= */}
+      {/* STATS */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Pending */}
         <div className="bg-white rounded-xl shadow p-5">
           <p className="text-sm text-gray-600">Status Pending</p>
           <h2 className="mt-2 text-3xl font-bold text-warning">
@@ -42,7 +70,6 @@ const DashboardDosen = () => {
           </h2>
         </div>
 
-        {/* Approved */}
         <div className="bg-white rounded-xl shadow p-5">
           <p className="text-sm text-gray-600">Disetujui</p>
           <h2 className="mt-2 text-3xl font-bold text-success">
@@ -50,7 +77,6 @@ const DashboardDosen = () => {
           </h2>
         </div>
 
-        {/* Rejected */}
         <div className="bg-white rounded-xl shadow p-5">
           <p className="text-sm text-gray-600">Ditolak</p>
           <h2 className="mt-2 text-3xl font-bold text-danger">

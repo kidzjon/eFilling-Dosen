@@ -2,6 +2,13 @@ import { db, storage } from "./firebase";
 import {
   collection,
   addDoc,
+  updateDoc,
+  query,
+  where,
+  orderBy,
+  getDocs,
+  doc,
+  getDoc,
   serverTimestamp
 } from "firebase/firestore";
 import {
@@ -55,4 +62,34 @@ export async function createActivity({
   });
 
   return docRef.id;
+}
+
+export async function getActivitiesByDosen(dosenId) {
+  const q = query(
+    collection(db, "activities"),
+    where("dosenId", "==", dosenId),
+    orderBy("createdAt", "desc")
+  );
+
+  const snap = await getDocs(q);
+
+  return snap.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
+}
+
+/**
+ * Ambil detail satu aktivitas
+ */
+export async function getActivityById(id) {
+  const ref = doc(db, "activities", id);
+  const snap = await getDoc(ref);
+
+  if (!snap.exists()) throw new Error("Activity not found");
+
+  return {
+    id: snap.id,
+    ...snap.data(),
+  };
 }
