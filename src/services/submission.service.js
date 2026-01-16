@@ -87,6 +87,20 @@ export async function getPendingSubmissions() {
   }));
 }
 
+export async function getAllActivitiesForAdmin() {
+  const q = query(
+    collection(db, "activities"),
+    orderBy("createdAt", "desc")
+  );
+
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+  }));
+}
+
+
 // ===============================
 // GET DETAIL SUBMISSION BY ID
 // ===============================
@@ -124,3 +138,7 @@ export async function reviewSubmission({
 
   return { success: true };
 }
+
+
+
+

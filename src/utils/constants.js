@@ -1,9 +1,9 @@
 export const ACTIVITY_TYPES = [
-  { value: "education", label: "Pendidikan & Pengajaran" },
-  { value: "research", label: "Penelitian" },
-  { value: "service", label: "Pengabdian" },
-  { value: "support", label: "Penunjang" },
-  { value: "other", label: "Lainnya" },
+  { value: "Pendidikan & Pengajaran", label: "Pendidikan & Pengajaran" },
+  { value: "Penelitian", label: "Penelitian" },
+  { value: "Pengabdian", label: "Pengabdian" },
+  { value: "Penunjang", label: "Penunjang" },
+  { value: "Lainnya", label: "Lainnya" },
 ];
 
 export const STATUS_LABELS = {

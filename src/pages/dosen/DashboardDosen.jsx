@@ -55,14 +55,30 @@ const DUMMY_RECENT = [
   },
 ];
 
-const fmtDate = (iso) =>
-  iso
-    ? new Date(iso).toLocaleDateString("id-ID", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
-    : "-";
+const fmtDate = (value) => {
+  if (!value) return "-";
+
+  // Firestore Timestamp
+  if (typeof value === "object" && value.seconds) {
+    return new Date(value.seconds * 1000).toLocaleDateString("id-ID", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  }
+
+  // Date object atau ISO string
+  const d = new Date(value);
+  if (isNaN(d)) return "-";
+
+  return d.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+
 
 const statusBadge = (status) => {
   switch (status) {

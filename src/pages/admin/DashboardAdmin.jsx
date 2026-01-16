@@ -16,105 +16,152 @@ const badgeClass = (status) => {
 
 const DashboardAdmin = () => {
   const navigate = useNavigate();
-  const [pendingCount, setPendingCount] = useState(0);
 
-  // ===============================
-  // DUMMY DATA (tanpa BE)
-  // ===============================
-  const dummy = useMemo(
-    () => ({
-      stats: {
-        pending: 3,
-        approvedToday: 5,
-        rejectedToday: 1,
-        totalToday: 9,
-      },
-      alerts: {
-        overduePending: 1, // pending > 3 hari (dummy)
-      },
-      recentQueue: [
-        {
-          id: "sub_001",
-          dosenName: "Krisna Firdiawan",
-          title: "Mengajar Basis Data",
-          type: "Pendidikan & Pengajaran",
-          date: "14 Jan 2026",
-          sks: 3,
-          status: "pending",
-        },
-        {
-          id: "sub_002",
-          dosenName: "Aulia Rahman",
-          title: "Penelitian MediaPipe Pose",
-          type: "Penelitian",
-          date: "13 Jan 2026",
-          sks: 2,
-          status: "pending",
-        },
-        {
-          id: "sub_003",
-          dosenName: "Sinta Lestari",
-          title: "Pengabdian: Workshop AI untuk Siswa",
-          type: "Pengabdian",
-          date: "12 Jan 2026",
-          sks: 2,
-          status: "pending",
-        },
-        {
-          id: "sub_004",
-          dosenName: "Doni Saputra",
-          title: "Penunjang: Reviewer Jurnal Internal",
-          type: "Penunjang",
-          date: "12 Jan 2026",
-          sks: 1,
-          status: "approved",
-        },
-        {
-          id: "sub_005",
-          dosenName: "Nadia Putri",
-          title: "Pengabdian: Pelatihan Canva",
-          type: "Pengabdian",
-          date: "11 Jan 2026",
-          sks: 1,
-          status: "rejected",
-        },
-      ],
-      notes:
-        "Contoh catatan: Pastikan bukti PDF jelas, nama file disarankan Tahun_Jenis_Judul.pdf",
-    }),
-    []
-  );
 
-  // ===============================
-  // OPTIONAL: Kalau activityApi.getPendingForAdmin() sudah ada dan aman,
-  // tetap dipanggil untuk sinkron pendingCount (fallback ke dummy kalau error)
-  // ===============================
+  const [allActivities, setAllActivities] = useState([]);
+  const [pendingActivities, setPendingActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const normalizeTimestamp = (value) => {
+    if (!value) return null;
+
+    // Firestore Timestamp
+    if (value.seconds) {
+      return new Date(value.seconds * 1000);
+    }
+
+    // ISO string / date string
+    const d = new Date(value);
+    if (!isNaN(d)) return d;
+
+    return null;
+  };
+  
+  const normalizeStatus = (status) =>
+  String(status || "").toLowerCase().trim();
+
+  const recentSubmissions = [...pendingActivities]
+  .sort((a,b) =>
+    normalizeTimestamp(b.createdAt) - normalizeTimestamp(a.createdAt)
+  )
+  .slice(0,5);
+
+
+  
   useEffect(() => {
     let mounted = true;
 
-    Promise.resolve()
-      .then(() => activityApi?.getPendingForAdmin?.())
-      .then((list) => {
-        if (!mounted) return;
-        if (Array.isArray(list)) setPendingCount(list.length);
-        else setPendingCount(dummy.stats.pending);
-      })
-      .catch(() => {
-        if (!mounted) return;
-        setPendingCount(dummy.stats.pending);
-      });
+    const fetchData = async () => {
+      try {
+        const [all, pending] = await Promise.all([
+          activityApi.getAllForAdmin(),
+          activityApi.getPendingForAdmin(),
+        ]);
 
-    return () => {
-      mounted = false;
+        if (!mounted) return;
+
+        setAllActivities(all || []);
+        setPendingActivities(pending || []);
+      } catch (err) {
+        console.error(err);
+        if (mounted) {
+          setAllActivities([]);
+          setPendingActivities([]);
+        }
+      }
     };
-  }, [dummy.stats.pending]);
 
-  const stats = {
-    pending: pendingCount || dummy.stats.pending,
-    approvedToday: dummy.stats.approvedToday,
-    rejectedToday: dummy.stats.rejectedToday,
-    totalToday: dummy.stats.totalToday,
+    fetchData();
+    return () => (mounted = false);
+  }, []);
+
+
+
+
+
+  const now = new Date();
+  const sevenDaysAgo = new Date(now);
+  sevenDaysAgo.setDate(now.getDate() - 7);
+
+  const approvedLast7Days = allActivities.filter(a => {
+    const status = normalizeStatus(a.status);
+    const d = normalizeTimestamp(a.updatedAt || a.createdAt);
+    return status === "approved" && d && d >= sevenDaysAgo;
+  }).length;
+
+  const rejectedLast7Days = allActivities.filter(a => {
+    const status = normalizeStatus(a.status);
+    const d = normalizeTimestamp(a.updatedAt || a.createdAt);
+    return status === "rejected" && d && d >= sevenDaysAgo;
+  }).length;
+
+
+
+  const totalLast7Days = allActivities.filter((a) => {
+    const d = normalizeTimestamp(a.createdAt);
+    return d && d >= sevenDaysAgo && d <= now;
+  }).length;
+
+
+
+  const stats = useMemo(() => ({
+    pending: allActivities.filter(
+      a => normalizeStatus(a.status) === "pending"
+    ).length,
+
+    approvedLast7Days,
+    rejectedLast7Days,
+    totalLast7Days,
+    recentQueue: allActivities.slice(0, 5).length,
+    notes: "Data bersifat sementara dan akan diperbarui otomatis.",
+  }), [allActivities, approvedLast7Days, rejectedLast7Days, totalLast7Days]);
+
+
+
+  const CATEGORY_LABEL = {
+    education: "Pendidikan",
+    research: "Penelitian",
+    service: "Pengabdian",
+    support: "Penunjang",
+    other: "Lainnya",
   };
+
+  const normalizeCategory = (raw) => {
+    if (!raw || typeof raw !== "string") return "other";
+
+    const v = raw.toLowerCase().trim();
+
+    if (
+      v === "" ||
+      v === "lainnya" ||
+      v === "other" ||
+      v === "-"
+    ) {
+      return "other";
+    }
+
+    return v;
+  };
+  const categoryStats = useMemo(() => {
+    const map = {};
+
+    pendingActivities.forEach((s) => {
+      const category = normalizeCategory(s.category);
+      map[category] = (map[category] || 0) + 1;
+    });
+
+    const total = Object.values(map).reduce((a, b) => a + b, 0);
+
+    return Object.entries(map).map(([key, count]) => ({
+      key,
+      count,
+      percent: total ? Math.round((count / total) * 100) : 0,
+    }));
+  }, [pendingActivities]);
+
+
+
+
 
   return (
     <div className="space-y-6">
@@ -148,30 +195,30 @@ const DashboardAdmin = () => {
         </div>
 
         <div className="stat">
-          <div className="stat-title text-gray-600">Disetujui (Hari ini)</div>
-          <div className="stat-value text-success">{stats.approvedToday}</div>
+          <div className="stat-title text-gray-600">Disetujui (7 Hari Terakhir)</div>
+          <div className="stat-value text-success">{stats.approvedLast7Days}</div>
           <div className="stat-desc text-gray-500">
-            Keputusan approve hari ini
+            Keputusan approve 7 hari terakhir
           </div>
         </div>
 
         <div className="stat">
-          <div className="stat-title text-gray-600">Ditolak (Hari ini)</div>
-          <div className="stat-value text-danger">{stats.rejectedToday}</div>
+          <div className="stat-title text-gray-600">Ditolak (7 Hari Terakhir)</div>
+          <div className="stat-value text-danger">{stats.rejectedLast7Days}</div>
           <div className="stat-desc text-gray-500">
-            Keputusan reject hari ini
+            Keputusan reject 7 hari terakhir 
           </div>
-        </div>
+        </div>  
 
         <div className="stat">
-          <div className="stat-title text-gray-600">Total Masuk (Hari ini)</div>
-          <div className="stat-value text-primary">{stats.totalToday}</div>
+          <div className="stat-title text-gray-600">Total Masuk (7 Hari Terakhir)</div>
+          <div className="stat-value text-primary">{stats.totalLast7Days}</div>
           <div className="stat-desc text-gray-500">Total submit (dummy)</div>
         </div>
       </div>
 
       {/* ================= ALERT ================= */}
-      {(dummy.alerts.overduePending > 0 || stats.pending > 0) && (
+      {stats.pending > 0 && (
         <div className="alert alert-warning shadow-sm">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -193,7 +240,7 @@ const DashboardAdmin = () => {
             <p className="text-sm opacity-80">
               Ada{" "}
               <span className="font-semibold">
-                {dummy.alerts.overduePending}
+                {stats.pending}
               </span>{" "}
               aktivitas pending yang sudah lebih dari 3 hari (dummy).
               Prioritaskan review.
@@ -228,7 +275,7 @@ const DashboardAdmin = () => {
                 Antrian Terbaru
               </h2>
               <p className="text-sm text-gray-600">
-                Menampilkan {dummy.recentQueue.length} data terbaru (dummy).
+                Menampilkan {stats.recentQueue} data terbaru (dummy).
               </p>
             </div>
 
@@ -256,12 +303,14 @@ const DashboardAdmin = () => {
               </thead>
 
               <tbody>
-                {dummy.recentQueue.map((row) => (
+                {recentSubmissions.map((row) => (
                   <tr key={row.id} className="hover">
                     <td className="text-center">{row.dosenName}</td>
                     <td className="text-center font-medium">{row.title}</td>
-                    <td className="text-center">{row.type}</td>
-                    <td className="text-center">{row.date}</td>
+                    <td className="text-center">{row.category}</td>
+                    <td className="text-center">{row.createdAt?.toDate
+                      ? row.createdAt.toDate().toLocaleDateString("id-ID")
+                      : "-"}</td>
                     <td className="text-center">{row.sks}</td>
                     <td className="text-center">
                       <span className={badgeClass(row.status)}>
@@ -288,7 +337,7 @@ const DashboardAdmin = () => {
             <div className="alert bg-base-200">
               <div>
                 <h3 className="font-semibold">Info</h3>
-                <p className="text-sm opacity-80">{dummy.notes}</p>
+                <p className="text-sm opacity-80">{stats.notes}</p>
               </div>
             </div>
           </div>
@@ -334,39 +383,32 @@ const DashboardAdmin = () => {
         <div className="card bg-white shadow rounded-xl">
           <div className="card-body">
             <h3 className="font-semibold text-gray-800">
-              Kategori Terbanyak (Dummy)
+              Kategori Terbanyak
             </h3>
-            <div className="mt-3 space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span>Pendidikan</span>
-                <span className="badge badge-primary badge-outline">45%</span>
-              </div>
-              <progress
-                className="progress progress-primary w-full"
-                value={45}
-                max="100"
-              />
 
-              <div className="flex items-center justify-between text-sm">
-                <span>Penelitian</span>
-                <span className="badge badge-secondary badge-outline">30%</span>
+            {categoryStats.length === 0 ? (
+              <p className="text-sm text-gray-500 mt-2">
+                Belum ada data aktivitas
+              </p>
+            ) : (
+              <div className="mt-3 space-y-3">
+                {categoryStats.map((c) => (
+                  <div key={c.key}>
+                    <div className="flex items-center justify-between text-sm">
+                      <span>{CATEGORY_LABEL[c.key] || c.key}</span>
+                      <span className="badge badge-outline">
+                        {c.percent}%
+                      </span>
+                    </div>
+                    <progress
+                      className="progress progress-primary w-full"
+                      value={c.percent}
+                      max="100"
+                    />
+                  </div>
+                ))}
               </div>
-              <progress
-                className="progress progress-secondary w-full"
-                value={30}
-                max="100"
-              />
-
-              <div className="flex items-center justify-between text-sm">
-                <span>Pengabdian</span>
-                <span className="badge badge-accent badge-outline">25%</span>
-              </div>
-              <progress
-                className="progress progress-accent w-full"
-                value={25}
-                max="100"
-              />
-            </div>
+            )}
           </div>
         </div>
       </div>

@@ -15,7 +15,7 @@ const ValidationQueue = () => {
 
   const columns = [
     { key: "title", label: "Judul" },
-    { key: "type", label: "Jenis" },
+    { key: "category", label: "Jenis" },
     {
       key: "date",
       label: "Tanggal",

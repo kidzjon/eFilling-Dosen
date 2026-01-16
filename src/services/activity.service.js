@@ -19,20 +19,24 @@ import {
 
 export async function createActivity({
   title,
+  description,
   category,
+  date,
+  sks,
   year,
   file,
   dosen
 }) {
-  // VALIDASI FILE
   if (!file) throw new Error("File wajib diupload");
   if (file.size > 10 * 1024 * 1024)
     throw new Error("Ukuran file maksimal 10MB");
 
-  // 1️⃣ BUAT DOKUMEN FIRESTORE DULU
   const docRef = await addDoc(collection(db, "activities"), {
     title,
+    description: description || "",
     category,
+    date, // ISO string
+    sks: Number(sks) || 0,
     year,
     dosenId: dosen.uid,
     dosenName: dosen.name,
@@ -42,19 +46,18 @@ export async function createActivity({
     updatedAt: serverTimestamp(),
   });
 
-  // 2️⃣ UPLOAD FILE KE STORAGE
+  const safeName = `${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
   const fileRef = ref(
     storage,
-    `efilling/${dosen.uid}/${docRef.id}/${file.name}`
+    `efilling/${dosen.uid}/${docRef.id}/${safeName}`
   );
 
   await uploadBytes(fileRef, file);
   const url = await getDownloadURL(fileRef);
 
-  // 3️⃣ UPDATE DOKUMEN DENGAN INFO FILE
   await updateDoc(docRef, {
-    file: {
-      name: file.name,
+    attachment: {
+      name: safeName,
       url,
       size: file.size,
     },
@@ -63,6 +66,7 @@ export async function createActivity({
 
   return docRef.id;
 }
+
 
 export async function getActivitiesByDosen(dosenId) {
   const q = query(
