@@ -14,7 +14,6 @@ const authSlice = createSlice({
     loginSuccess(state, action) {
       state.user = action.payload;
       localStorage.setItem("efd_user", JSON.stringify(action.payload));
-      localStorage.setItem("efd_token", "dummy-token");
     },
     logout(state) {
       state.user = null;

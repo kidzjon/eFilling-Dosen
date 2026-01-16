@@ -5,36 +5,12 @@ import { auth, db } from "@/services/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
 const Login = () => {
-  const [form, setForm] = useState({
-    email: "",
-    password: "",
-  });
-
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (key) => (e) => {
     setForm((prev) => ({ ...prev, [key]: e.target.value }));
-  };
-
-  // ✅ HARUS async
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    try {
-      await loginWithEmail(form.email, form.password);
-      await redirectByRole();
-    } catch (err) {
-      alert(err.message);
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    try {
-      await loginWithGoogle();
-      await redirectByRole();
-    } catch (err) {
-      alert(err.message);
-    }
   };
 
   const redirectByRole = async () => {
@@ -50,65 +26,207 @@ const Login = () => {
     else navigate("/login");
   };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await loginWithEmail(form.email, form.password);
+      await redirectByRole();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      await loginWithGoogle();
+      await redirectByRole();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary to-success px-4">
-      <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-7">
-        <h2 className="text-2xl font-semibold mb-1">Login eFilling Dosen</h2>
+    <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-primary to-success">
+      {/* Card */}
+      <div className="w-full max-w-md">
+        <div className="card bg-white shadow-2xl rounded-xl">
+          <div className="card-body p-8 space-y-6">
+            {/* Auth Switch */}
+            <div className="flex justify-center">
+              <div className="flex w-64 rounded-full bg-gray-100 p-1 shadow-inner">
+                {/* Sign in */}
+                <button
+                  type="button"
+                  onClick={() => navigate("/login")}
+                  className="
+                  flex-1 rounded-full py-2 text-sm font-semibold
+                  bg-white text-primary shadow
+                  transition-all
+                "
+                >
+                  Sign in
+                </button>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
-            <input
-              type="email"
-              value={form.email}
-              onChange={handleChange("email")}
-              placeholder="email@kampus.ac.id"
-              required
-              className="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
-            />
+                {/* Sign up */}
+                <button
+                  type="button"
+                  onClick={() => navigate("/register")}
+                  className="
+                  flex-1 rounded-full py-2 text-sm font-medium
+                  text-gray-500 hover:text-primary
+                  transition-all
+                "
+                >
+                  Sign up
+                </button>
+              </div>
+            </div>
+
+            {/* Title */}
+            <div className="text-center space-y-1">
+              <h2 className="text-2xl font-bold text-gray-800">
+                Login eFilling Dosen
+              </h2>
+              <p className="text-sm text-gray-500">
+                Silakan masuk menggunakan akun Anda.
+              </p>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Email */}
+              <div className="form-control">
+                <label className="label py-1">
+                  <span className="label-text font-medium">Email</span>
+                </label>
+
+                <label className="input input-bordered flex items-center gap-2 bg-white">
+                  {/* mail icon */}
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    className="w-4 h-4 opacity-50"
+                  >
+                    <path d="M1.5 6.75A3.75 3.75 0 0 1 5.25 3h13.5A3.75 3.75 0 0 1 22.5 6.75v10.5A3.75 3.75 0 0 1 18.75 21H5.25A3.75 3.75 0 0 1 1.5 17.25V6.75Z" />
+                    <path d="M21 8.02 13.35 13.9a2.25 2.25 0 0 1-2.7 0L3 8.02v9.23A2.25 2.25 0 0 0 5.25 19.5h13.5A2.25 2.25 0 0 0 21 17.25V8.02Z" />
+                  </svg>
+
+                  <input
+                    type="email"
+                    className="grow"
+                    placeholder="email@kampus.ac.id"
+                    value={form.email}
+                    onChange={handleChange("email")}
+                    required
+                  />
+                </label>
+              </div>
+
+              {/* Password */}
+              <div className="form-control">
+                <label className="label py-1">
+                  <span className="label-text font-medium">Password</span>
+                </label>
+
+                <label className="input input-bordered flex items-center gap-2 bg-white">
+                  {/* lock icon */}
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    className="w-4 h-4 opacity-50"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M12 1.5a5.25 5.25 0 0 0-5.25 5.25V9H6a3 3 0 0 0-3 3v7.5a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3V12a3 3 0 0 0-3-3h-.75V6.75A5.25 5.25 0 0 0 12 1.5Zm3.75 7.5V6.75a3.75 3.75 0 1 0-7.5 0V9h7.5Z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+
+                  <input
+                    type="password"
+                    className="grow"
+                    placeholder="Password"
+                    value={form.password}
+                    onChange={handleChange("password")}
+                    required
+                  />
+                </label>
+              </div>
+
+              {/* Submit */}
+              <button
+                type="submit"
+                className="btn btn-primary w-full"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <span className="loading loading-spinner loading-sm" />
+                    Memproses...
+                  </>
+                ) : (
+                  "Sign in"
+                )}
+              </button>
+            </form>
+
+            {/* Divider */}
+            <div className="divider text-xs text-gray-400">or sign in with</div>
+
+            {/* Google */}
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              className="btn btn-outline w-full"
+              disabled={loading}
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 48 48"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fill="#FFC107"
+                  d="M43.611 20.083H42V20H24v8h11.303C33.824 32.657 29.351 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.051 6.053 29.241 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.651-.389-3.917z"
+                />
+                <path
+                  fill="#FF3D00"
+                  d="M6.306 14.691l6.571 4.819C14.655 16.108 19.01 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.051 6.053 29.241 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"
+                />
+                <path
+                  fill="#4CAF50"
+                  d="M24 44c5.134 0 9.86-1.964 13.389-5.167l-6.19-5.238C29.235 35.091 26.715 36 24 36c-5.329 0-9.787-3.318-11.28-7.946l-6.52 5.02C9.505 39.556 16.227 44 24 44z"
+                />
+                <path
+                  fill="#1976D2"
+                  d="M43.611 20.083H42V20H24v8h11.303c-.72 2.048-2.043 3.806-3.814 5.133l.003-.002 6.19 5.238C36.997 39.015 44 34 44 24c0-1.341-.138-2.651-.389-3.917z"
+                />
+              </svg>
+              Continue with Google
+            </button>
+
+            {/* Footer */}
+            <p className="text-center text-sm text-gray-500">
+              Belum punya akun?{" "}
+              <button
+                type="button"
+                className="link link-primary font-medium"
+                onClick={() => navigate("/register")}
+              >
+                Sign up
+              </button>
+            </p>
           </div>
-
-          {/* Password */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Password</label>
-            <input
-              type="password"
-              value={form.password}
-              onChange={handleChange("password")}
-              placeholder="Password"
-              required
-              className="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-
-          {/* Submit */}
-          <button
-            type="submit"
-            className="w-full bg-primary text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 transition"
-          >
-            Masuk
-          </button>
-
-          {/* Google Login */}
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            className="w-full border py-2.5 rounded-lg font-medium mt-2"
-          >
-            Login dengan Google
-          </button>
-
-          {/* Register */}
-          <button
-            type="button"
-            onClick={() => navigate("/register")}
-            className="w-full bg-primary text-white py-2.5 rounded-lg font-medium"
-          >
-            Register
-          </button>
-
-        </form>
+        </div>
       </div>
     </div>
   );

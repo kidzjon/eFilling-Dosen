@@ -1,12 +1,13 @@
+// src/api/activityApi.js
 import {
   createSubmission,
   getMySubmissions,
   reviewSubmission,
+  getPendingSubmissions,
+  getSubmissionById,
 } from "@/services/submission.service";
 
 import { getCurrentUserProfile } from "@/services/auth.service";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import { db } from "@/services/firebase";
 
 export const activityApi = {
   // ===============================
@@ -16,6 +17,18 @@ export const activityApi = {
     const user = await getCurrentUserProfile();
     if (!user) return [];
     return await getMySubmissions(user.uid);
+  },
+
+  // Alias supaya ActivityList lama tetap jalan
+  async getByDosen(uid) {
+    if (!uid) return [];
+    return await getMySubmissions(uid);
+  },
+
+  // Dipakai ActivityDetail / ActivityForm(edit) / ValidationDetail
+  async getById(id) {
+    if (!id) throw new Error("Missing id");
+    return await getSubmissionById(id);
   },
 
   async createActivity({ data, file }) {
@@ -34,6 +47,14 @@ export const activityApi = {
   // ===============================
   // ADMIN
   // ===============================
+  // Dipakai DashboardAdmin + ValidationQueue
+  async getPendingForAdmin() {
+    const admin = await getCurrentUserProfile();
+    if (!admin) throw new Error("Not authenticated");
+    return await getPendingSubmissions();
+  },
+
+  // method asli yang sudah ada
   async updateActivityStatus(id, status, notes = "") {
     const admin = await getCurrentUserProfile();
     if (!admin) throw new Error("Not authenticated");
@@ -47,16 +68,9 @@ export const activityApi = {
 
     return { success: true };
   },
-    async getByDosen(dosenId) {
-    const q = query(
-      collection(db, "activities"),
-      where("dosenId", "==", dosenId)
-    );
 
-    const snap = await getDocs(q);
-    return snap.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+  // Alias supaya ValidationDetail lama tetap jalan
+  async setStatus(id, status, notes = "") {
+    return await this.updateActivityStatus(id, status, notes);
   },
 };
