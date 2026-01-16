@@ -1,11 +1,10 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { Button } from "../../components/Button";
+import { activityApi } from "../../api/activityApi";
 
 // ===============================
-// DUMMY DATA (FE ONLY)
-// nanti tinggal ganti dengan data dari BE (submissions)
+// DUMMY DATA (fallback)
 // ===============================
 const DUMMY_RECENT = [
   {
@@ -57,11 +56,13 @@ const DUMMY_RECENT = [
 ];
 
 const fmtDate = (iso) =>
-  new Date(iso).toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  iso
+    ? new Date(iso).toLocaleDateString("id-ID", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+    : "-";
 
 const statusBadge = (status) => {
   switch (status) {
@@ -74,27 +75,88 @@ const statusBadge = (status) => {
   }
 };
 
+// ===============================
+// Normalizer: BE -> UI model
+// (biar aman meski field teman beda)
+// ===============================
+const normalizeActivity = (a) => {
+  const id = a?.id || a?.submissionId || a?.docId || a?._id;
+  const title =
+    a?.title || a?.judul || a?.activityTitle || a?.data?.title || "-";
+  const type = a?.type || a?.jenis || a?.category || a?.data?.type || "-";
+  const date =
+    a?.date ||
+    a?.tanggal ||
+    a?.createdAt ||
+    a?.submittedAt ||
+    a?.data?.date ||
+    null;
+  const sks = Number(a?.sks ?? a?.credits ?? a?.data?.sks ?? 0) || 0;
+  const status = (
+    a?.status ||
+    a?.state ||
+    a?.data?.status ||
+    "pending"
+  ).toLowerCase();
+  const reviewNotes =
+    a?.reviewNotes || a?.notes || a?.catatan || a?.data?.reviewNotes || "";
+
+  return { id, title, type, date, sks, status, reviewNotes };
+};
+
 const DashboardDosen = () => {
   const user = useSelector((s) => s.auth.user);
   const navigate = useNavigate();
 
+  // data utama dashboard (BE kalau ada, fallback dummy)
+  const [activities, setActivities] = useState(DUMMY_RECENT);
+  const [source, setSource] = useState("dummy"); // "be" | "dummy"
+
+  useEffect(() => {
+    const fetchFromBE = async () => {
+      try {
+        const list = await activityApi.getByDosen(); // versi BE teman kamu
+        const normalized = (Array.isArray(list) ? list : [])
+          .map(normalizeActivity)
+          .filter((x) => x.id); // minimal punya id
+
+        if (normalized.length > 0) {
+          setActivities(normalized);
+          setSource("be");
+        } else {
+          // kalau BE kosong, biarin dummy biar UI tetap kelihatan
+          setActivities(DUMMY_RECENT);
+          setSource("dummy");
+        }
+      } catch (err) {
+        console.error(
+          "Failed to load dashboard activities (fallback dummy):",
+          err
+        );
+        setActivities(DUMMY_RECENT);
+        setSource("dummy");
+      }
+    };
+
+    fetchFromBE();
+  }, []);
+
   // ===============================
-  // HITUNG STATS DARI DUMMY
+  // HITUNG STATS DARI activities (BE atau dummy)
   // ===============================
   const stats = useMemo(() => {
-    const total = DUMMY_RECENT.length;
-    const pending = DUMMY_RECENT.filter((x) => x.status === "pending").length;
-    const approved = DUMMY_RECENT.filter((x) => x.status === "approved").length;
-    const rejected = DUMMY_RECENT.filter((x) => x.status === "rejected").length;
-    const sksApproved = DUMMY_RECENT.filter(
-      (x) => x.status === "approved"
-    ).reduce((sum, x) => sum + (Number(x.sks) || 0), 0);
+    const total = activities.length;
+    const pending = activities.filter((x) => x.status === "pending").length;
+    const approved = activities.filter((x) => x.status === "approved").length;
+    const rejected = activities.filter((x) => x.status === "rejected").length;
 
-    const latest = [...DUMMY_RECENT].sort(
-      (a, b) => new Date(b.date) - new Date(a.date)
+    const sksApproved = activities
+      .filter((x) => x.status === "approved")
+      .reduce((sum, x) => sum + (Number(x.sks) || 0), 0);
+
+    const latest = [...activities].sort(
+      (a, b) => new Date(b.date || 0) - new Date(a.date || 0)
     )[0];
-
-    const needsFix = DUMMY_RECENT.filter((x) => x.status === "rejected").length;
 
     return {
       total,
@@ -103,19 +165,19 @@ const DashboardDosen = () => {
       rejected,
       sksApproved,
       latestUpdatedAt: latest?.date || null,
-      needsFix,
+      needsFix: rejected,
     };
-  }, []);
+  }, [activities]);
 
   const recentList = useMemo(() => {
-    return [...DUMMY_RECENT]
-      .sort((a, b) => new Date(b.date) - new Date(a.date))
+    return [...activities]
+      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
       .slice(0, 5);
-  }, []);
+  }, [activities]);
 
   const firstRejected = useMemo(() => {
-    return DUMMY_RECENT.find((x) => x.status === "rejected") || null;
-  }, []);
+    return activities.find((x) => x.status === "rejected") || null;
+  }, [activities]);
 
   return (
     <div className="space-y-6">
@@ -126,7 +188,11 @@ const DashboardDosen = () => {
             Dashboard Dosen
           </h1>
           <p className="text-sm text-gray-600">
-            Ringkasan aktivitas dan status validasi.
+            Ringkasan aktivitas dan status validasi{" "}
+            <span className="text-xs opacity-60">
+              ({source === "be" ? "data BE" : "dummy"})
+            </span>
+            .
           </p>
         </div>
 
@@ -222,7 +288,7 @@ const DashboardDosen = () => {
           </div>
         </div>
 
-        {/* ================= PROGRESS / TARGET (dummy) ================= */}
+        {/* ================= PROGRESS / TARGET (dummy logic tetap) ================= */}
         <div className="lg:col-span-3">
           <div className="card bg-white shadow h-full">
             <div className="card-body">
@@ -282,7 +348,8 @@ const DashboardDosen = () => {
             >
               Lihat Semua
             </button>
-            {firstRejected && (
+
+            {firstRejected?.id && (
               <button
                 type="button"
                 className="btn btn-sm btn-primary"
@@ -305,6 +372,7 @@ const DashboardDosen = () => {
               Kamu bisa menunggu proses validasi admin.
             </span>
           </div>
+
           <button
             type="button"
             className="btn btn-sm btn-outline"
@@ -321,6 +389,7 @@ const DashboardDosen = () => {
               Tidak ada aktivitas yang pending/ditolak saat ini.
             </span>
           </div>
+
           <button
             type="button"
             className="btn btn-sm btn-outline"
@@ -340,9 +409,11 @@ const DashboardDosen = () => {
                 Aktivitas Terbaru
               </h2>
               <p className="text-sm text-gray-600">
-                Menampilkan 5 pengajuan terakhir (dummy).
+                Menampilkan 5 pengajuan terakhir (
+                {source === "be" ? "BE" : "dummy"}).
               </p>
             </div>
+
             <button
               type="button"
               className="btn btn-outline btn-sm"
@@ -369,17 +440,14 @@ const DashboardDosen = () => {
                 {recentList.map((row) => (
                   <tr key={row.id}>
                     <td className="font-medium text-center">{row.title}</td>
-
                     <td>{row.type}</td>
                     <td>{fmtDate(row.date)}</td>
                     <td>{row.sks}</td>
-
                     <td>
                       <span className={statusBadge(row.status)}>
                         {row.status}
                       </span>
                     </td>
-
                     <td>
                       <div className="flex justify-center gap-2">
                         <button
@@ -410,7 +478,6 @@ const DashboardDosen = () => {
             </table>
           </div>
 
-          {/* quick note for rejected */}
           {firstRejected?.reviewNotes ? (
             <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
               <span className="font-semibold">

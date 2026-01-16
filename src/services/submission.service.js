@@ -6,12 +6,17 @@ import {
   query,
   where,
   getDocs,
-  getDoc, // ✅ TAMBAHAN
+  getDoc,
   serverTimestamp,
+  orderBy,
 } from "firebase/firestore";
 
 import { db } from "./firebase";
 import { uploadSubmissionFile } from "./storage.service";
+
+// NOTE:
+// Kita konsisten pakai collection "activities" (sesuai implementasi teman),
+// supaya semua flow (Tambah Kegiatan, Dashboard Dosen, Admin Validasi) nyambung.
 
 // ===============================
 // CREATE SUBMISSION (DOSEN)
@@ -19,21 +24,24 @@ import { uploadSubmissionFile } from "./storage.service";
 export async function createSubmission({ data, file, uid }) {
   if (!file) throw new Error("File wajib diupload");
 
-  const ref = await addDoc(collection(db, "submissions"), {
+  // 1) buat dokumen activity
+  const ref = await addDoc(collection(db, "activities"), {
     ...data,
-    submittedBy: uid,
+    dosenId: uid, // penting: dipakai getMySubmissions
     status: "pending",
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
 
+  // 2) upload file ke storage
   const fileMeta = await uploadSubmissionFile({
     file,
     uid,
     submissionId: ref.id,
   });
 
-  await updateDoc(doc(db, "submissions", ref.id), {
+  // 3) update dokumen dengan metadata file
+  await updateDoc(doc(db, "activities", ref.id), {
     file: fileMeta,
     updatedAt: serverTimestamp(),
   });
@@ -45,12 +53,16 @@ export async function createSubmission({ data, file, uid }) {
 // GET SUBMISSIONS BY DOSEN
 // ===============================
 export async function getMySubmissions(uid) {
+  if (!uid) return [];
+
   const q = query(
-    collection(db, "submissions"),
-    where("submittedBy", "==", uid)
+    collection(db, "activities"),
+    where("dosenId", "==", uid),
+    orderBy("createdAt", "desc")
   );
 
   const snap = await getDocs(q);
+
   return snap.docs.map((d) => ({
     id: d.id,
     ...d.data(),
@@ -62,11 +74,13 @@ export async function getMySubmissions(uid) {
 // ===============================
 export async function getPendingSubmissions() {
   const q = query(
-    collection(db, "submissions"),
-    where("status", "==", "pending")
+    collection(db, "activities"),
+    where("status", "==", "pending"),
+    orderBy("createdAt", "desc")
   );
 
   const snap = await getDocs(q);
+
   return snap.docs.map((d) => ({
     id: d.id,
     ...d.data(),
@@ -79,7 +93,7 @@ export async function getPendingSubmissions() {
 export async function getSubmissionById(id) {
   if (!id) throw new Error("Missing submission id");
 
-  const snap = await getDoc(doc(db, "submissions", id));
+  const snap = await getDoc(doc(db, "activities", id));
   if (!snap.exists()) throw new Error("Submission not found");
 
   return {
@@ -97,12 +111,16 @@ export async function reviewSubmission({
   reviewNotes,
   adminUid,
 }) {
-  await updateDoc(doc(db, "submissions", submissionId), {
+  if (!submissionId) throw new Error("Missing submissionId");
+
+  await updateDoc(doc(db, "activities", submissionId), {
     status,
-    reviewNotes,
-    reviewedBy: adminUid,
+    reviewNotes: reviewNotes || "",
+    reviewedBy: adminUid || null,
     reviewedAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
-    lastUpdatedBy: adminUid,
+    lastUpdatedBy: adminUid || null,
   });
+
+  return { success: true };
 }

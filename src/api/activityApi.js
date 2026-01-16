@@ -13,16 +13,16 @@ export const activityApi = {
   // ===============================
   // DOSEN
   // ===============================
-  async getActivities() {
-    const user = await getCurrentUserProfile();
-    if (!user) return [];
-    return await getMySubmissions(user.uid);
-  },
-
-  // Alias supaya ActivityList lama tetap jalan
+  // Bisa dipanggil tanpa uid (pakai current user),
+  // atau pakai uid (untuk kompatibilitas lama).
   async getByDosen(uid) {
-    if (!uid) return [];
-    return await getMySubmissions(uid);
+    // kompatibilitas lama: kalau uid dikirim
+    if (uid) return await getMySubmissions(uid);
+
+    // default: current logged-in user
+    const user = await getCurrentUserProfile();
+    if (!user) throw new Error("Not authenticated");
+    return await getMySubmissions(user.uid);
   },
 
   // Dipakai ActivityDetail / ActivityForm(edit) / ValidationDetail

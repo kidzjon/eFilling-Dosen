@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { activityApi } from "../../api/activityApi";
 import { Table } from "../../components/Table";
@@ -18,26 +17,44 @@ const statusBadgeClass = (status) => {
 };
 
 const ActivityList = () => {
-  const user = useSelector((s) => s.auth.user);
   const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!user) return;
-    activityApi.getByDosen(user.id).then(setData);
-  }, [user]);
+    let mounted = true;
+
+    activityApi
+      .getByDosen()
+      .then((res) => {
+        if (mounted) setData(res);
+      })
+      .catch((err) => {
+        console.error(err);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const columns = [
     { key: "title", label: "Judul" },
     {
-      key: "type",
+      key: "category",
       label: "Jenis",
-      render: (row) => row.type,
+      render: (row) => row.category,
     },
     {
-      key: "date",
+      key: "createdAt",
       label: "Tanggal",
-      render: (row) => formatDate(row.date),
+        render: (row) =>
+        row.createdAt?.toDate
+          ? formatDate(row.createdAt.toDate())
+          : "-",
     },
     {
       key: "status",
@@ -56,7 +73,7 @@ const ActivityList = () => {
 
   return (
     <div className="space-y-6">
-      {/* ================= HEADER ================= */}
+      {/* HEADER */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-gray-800">
@@ -72,10 +89,12 @@ const ActivityList = () => {
         </Button>
       </div>
 
-      {/* ================= TABLE ================= */}
+      {/* TABLE */}
       <Table
         columns={columns}
         data={data}
+        loading={loading}
+        emptyText="Belum ada aktivitas"
         renderActions={(row) => (
           <div className="flex gap-2">
             <Button
