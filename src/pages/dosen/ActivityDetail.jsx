@@ -40,17 +40,19 @@ const ActivityDetail = () => {
       </div>
 
       {/* ================= DETAIL CARD ================= */}
-      <div className="bg-white rounded-xl shadow p-6 max-w-3xl space-y-3">
+      <div className="bg-white rounded-xl shadow p-6 max-w-3xl space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <p>
-            <span className="font-medium">Jenis:</span> {activity.type}
+            <span className="font-medium">Jenis:</span>{" "}
+            {activity.category || "-"}
           </p>
           <p>
             <span className="font-medium">Tanggal:</span>{" "}
             {formatDate(activity.date)}
           </p>
           <p>
-            <span className="font-medium">SKS:</span> {activity.sks}
+            <span className="font-medium">SKS:</span>{" "}
+            {activity.sks ?? 0}
           </p>
           <p>
             <span className="font-medium">Status:</span>{" "}
@@ -59,17 +61,35 @@ const ActivityDetail = () => {
         </div>
 
         {/* ================= ADMIN NOTES ================= */}
-        {activity.notes && (
+        {activity.adminNote && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
-            <span className="font-medium">Catatan Admin:</span> {activity.notes}
+            <span className="font-medium">Catatan Admin:</span>{" "}
+            {activity.adminNote}
           </div>
         )}
 
         {/* ================= DESCRIPTION ================= */}
         <div>
           <p className="font-medium text-sm mb-1">Deskripsi</p>
-          <p className="text-sm text-gray-700">{activity.description || "-"}</p>
+          <p className="text-sm text-gray-700">
+            {activity.description || "-"}
+          </p>
         </div>
+
+        {/* ================= ATTACHMENT ================= */}
+        {activity.attachment?.url && (
+          <div>
+            <p className="font-medium text-sm mb-1">Bukti Kegiatan</p>
+            <a
+              href={activity.attachment.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline text-sm"
+            >
+              {activity.attachment.name || "Lihat File"}
+            </a>
+          </div>
+        )}
       </div>
     </div>
   );

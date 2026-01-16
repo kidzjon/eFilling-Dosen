@@ -5,6 +5,7 @@ import {
   reviewSubmission,
   getPendingSubmissions,
   getSubmissionById,
+  getAllActivitiesForAdmin
 } from "@/services/submission.service";
 
 import { getCurrentUserProfile } from "@/services/auth.service";
@@ -51,8 +52,16 @@ export const activityApi = {
   async getPendingForAdmin() {
     const admin = await getCurrentUserProfile();
     if (!admin) throw new Error("Not authenticated");
+    if (admin.role !== "admin") throw new Error("Forbidden");
     return await getPendingSubmissions();
   },
+  async getAllForAdmin() {
+    const admin = await getCurrentUserProfile();
+    if (!admin) throw new Error("Not authenticated");
+    if (admin.role !== "admin") throw new Error("Forbidden");
+    return await getAllActivitiesForAdmin();
+  },
+
 
   // method asli yang sudah ada
   async updateActivityStatus(id, status, notes = "") {
@@ -73,4 +82,5 @@ export const activityApi = {
   async setStatus(id, status, notes = "") {
     return await this.updateActivityStatus(id, status, notes);
   },
+
 };

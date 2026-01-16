@@ -14,9 +14,13 @@ const ActivityForm = () => {
 
   const [values, setValues] = useState({
     title: "",
+    description: "",
     category: "",
+    date: "",
+    sks: "",
     year: "",
   });
+
 
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -37,7 +41,10 @@ const ActivityForm = () => {
     try {
       await createActivity({
         title: values.title,
+        description: values.description,
         category: values.category,
+        date: values.date,
+        sks: Number(values.sks),
         year: Number(values.year),
         file,
         dosen: user,
@@ -85,8 +92,8 @@ const ActivityForm = () => {
           <Input
             label="Jenis Aktivitas"
             as="select"
-            value={values.type}
-            onChange={handleChange("type")}
+            value={values.category}
+            onChange={handleChange("category")}
             required
           >
             <option value="">Pilih jenis...</option>
