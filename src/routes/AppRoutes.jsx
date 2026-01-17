@@ -82,8 +82,6 @@ export default function AppRoutes() {
       {/* DEFAULT */}
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
-      <Route path="/register" element={<Register />} />
-
     </Routes>
   );
-};
+}

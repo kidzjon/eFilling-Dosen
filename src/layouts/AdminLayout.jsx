@@ -1,15 +1,14 @@
 import React from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { useSelector, useDispatch } from "react-redux";
-import { logout } from "../store/authSlice";
+import { useAuth } from "@/hooks/useAuth";
+import { logout } from "@/services/auth.service";
 
 export const AdminLayout = () => {
-  const user = useSelector((s) => s.auth.user);
-  const dispatch = useDispatch();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    dispatch(logout());
+  const handleLogout = async () => {
+    await logout();
     navigate("/login");
   };
 
@@ -20,9 +19,7 @@ export const AdminLayout = () => {
 
   return (
     <div className="min-h-screen flex bg-background">
-      {/* ================= SIDEBAR ================= */}
       <aside className="w-64 bg-slate-900 text-slate-100 flex flex-col">
-        {/* Brand & User */}
         <div className="px-5 py-4 border-b border-slate-700">
           <h1 className="text-lg font-semibold">Admin eFilling</h1>
           <p className="text-xs text-slate-400 mt-1">
@@ -30,7 +27,6 @@ export const AdminLayout = () => {
           </p>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1">
           <NavLink
             to="/admin"
@@ -39,7 +35,6 @@ export const AdminLayout = () => {
               `${navBase} ${isActive ? navActive : navIdle}`
             }
           >
-            {/* icon dashboard */}
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="w-5 h-5"
@@ -57,7 +52,6 @@ export const AdminLayout = () => {
               `${navBase} ${isActive ? navActive : navIdle}`
             }
           >
-            {/* icon validasi (clipboard-check) */}
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="w-5 h-5"
@@ -71,20 +65,11 @@ export const AdminLayout = () => {
           </NavLink>
         </nav>
 
-        {/* Logout */}
         <div className="mt-auto px-3 py-4 border-t border-slate-700">
           <button
             onClick={handleLogout}
-            className="
-              w-full flex items-center gap-3
-              px-4 py-2.5 rounded-lg
-              text-sm font-semibold
-              text-red-400
-              hover:bg-red-500/10
-              transition
-            "
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold text-red-400 hover:bg-red-500/10 transition"
           >
-            {/* icon logout */}
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="w-5 h-5"
@@ -109,7 +94,6 @@ export const AdminLayout = () => {
         </div>
       </aside>
 
-      {/* ================= MAIN CONTENT ================= */}
       <main className="flex-1 p-6">
         <Outlet />
       </main>

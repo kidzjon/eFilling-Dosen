@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { activityApi } from "../../api/activityApi";
 import { formatDate } from "../../utils/formatDate";
@@ -19,13 +19,27 @@ const ActivityDetail = () => {
       });
   }, [id, navigate]);
 
+  const attachment = useMemo(() => {
+    if (!activity) return null;
+    if (activity.attachment?.url) return activity.attachment;
+    if (activity.file?.downloadUrl) {
+      return {
+        name: activity.file.name || "File",
+        url: activity.file.downloadUrl,
+        size: activity.file.size,
+        contentType: activity.file.contentType,
+        path: activity.file.path,
+      };
+    }
+    return null;
+  }, [activity]);
+
   if (!activity) {
     return <div className="text-sm text-gray-500">Memuat...</div>;
   }
 
   return (
     <div className="space-y-6">
-      {/* ================= HEADER ================= */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-gray-800">
@@ -39,7 +53,6 @@ const ActivityDetail = () => {
         </Button>
       </div>
 
-      {/* ================= DETAIL CARD ================= */}
       <div className="bg-white rounded-xl shadow p-6 max-w-3xl space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <p>
@@ -51,8 +64,7 @@ const ActivityDetail = () => {
             {formatDate(activity.date)}
           </p>
           <p>
-            <span className="font-medium">SKS:</span>{" "}
-            {activity.sks ?? 0}
+            <span className="font-medium">SKS:</span> {activity.sks ?? 0}
           </p>
           <p>
             <span className="font-medium">Status:</span>{" "}
@@ -60,33 +72,29 @@ const ActivityDetail = () => {
           </p>
         </div>
 
-        {/* ================= ADMIN NOTES ================= */}
-        {activity.adminNote && (
+        {/* CATATAN ADMIN (standar: reviewNotes, fallback: adminNote) */}
+        {(activity.reviewNotes || activity.adminNote) && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
             <span className="font-medium">Catatan Admin:</span>{" "}
-            {activity.adminNote}
+            {activity.reviewNotes || activity.adminNote}
           </div>
         )}
 
-        {/* ================= DESCRIPTION ================= */}
         <div>
           <p className="font-medium text-sm mb-1">Deskripsi</p>
-          <p className="text-sm text-gray-700">
-            {activity.description || "-"}
-          </p>
+          <p className="text-sm text-gray-700">{activity.description || "-"}</p>
         </div>
 
-        {/* ================= ATTACHMENT ================= */}
-        {activity.attachment?.url && (
+        {attachment?.url && (
           <div>
             <p className="font-medium text-sm mb-1">Bukti Kegiatan</p>
             <a
-              href={activity.attachment.url}
+              href={attachment.url}
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary underline text-sm"
             >
-              {activity.attachment.name || "Lihat File"}
+              {attachment.name || "Lihat File"}
             </a>
           </div>
         )}

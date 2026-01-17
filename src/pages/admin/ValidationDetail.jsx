@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { activityApi } from "../../api/activityApi";
 import { formatDate } from "../../utils/formatDate";
@@ -9,13 +9,31 @@ const ValidationDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-
   const [activity, setActivity] = useState(null);
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
-    activityApi.getById(id).then(setActivity);
+    activityApi.getById(id).then((res) => {
+      setActivity(res);
+      // kalau sudah ada reviewNotes lama, tampilkan sebagai referensi
+      setNotes(res?.reviewNotes || "");
+    });
   }, [id]);
+
+  const attachment = useMemo(() => {
+    if (!activity) return null;
+    if (activity.attachment?.url) return activity.attachment;
+    if (activity.file?.downloadUrl) {
+      return {
+        name: activity.file.name || "File",
+        url: activity.file.downloadUrl,
+        size: activity.file.size,
+        contentType: activity.file.contentType,
+        path: activity.file.path,
+      };
+    }
+    return null;
+  }, [activity]);
 
   if (!activity) {
     return <div className="text-sm text-gray-500">Memuat...</div>;
@@ -25,7 +43,7 @@ const ValidationDetail = () => {
 
   const handleApprove = async () => {
     try {
-      await activityApi.setStatus(id, "approved");
+      await activityApi.setStatus(id, "approved", notes || "");
       navigate("/admin/validation");
     } catch (err) {
       alert(err.message);
@@ -46,14 +64,8 @@ const ValidationDetail = () => {
     }
   };
 
-
-  if (!activity) {
-    return <div className="text-sm text-gray-500">Memuat...</div>;
-  }
-
   return (
     <div className="space-y-6">
-      {/* ================= HEADER ================= */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-gray-800">
@@ -67,7 +79,6 @@ const ValidationDetail = () => {
         </Button>
       </div>
 
-      {/* ================= DETAIL CARD ================= */}
       <div className="bg-white rounded-xl shadow p-6 max-w-3xl space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <p>
@@ -85,22 +96,22 @@ const ValidationDetail = () => {
         <div>
           <p className="font-medium text-sm mb-1">Deskripsi</p>
           <p className="text-sm text-gray-700">{activity.description || "-"}</p>
-          {activity.attachment?.url && (
-          <div>
-            <p className="font-medium text-sm mb-1">Bukti Kegiatan</p>
-            <a
-              href={activity.attachment.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary underline text-sm"
-            >
-              {activity.attachment.name || "Lihat File"}
-            </a>
-          </div>
+
+          {attachment?.url && (
+            <div className="mt-3">
+              <p className="font-medium text-sm mb-1">Bukti Kegiatan</p>
+              <a
+                href={attachment.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline text-sm"
+              >
+                {attachment.name || "Lihat File"}
+              </a>
+            </div>
           )}
         </div>
 
-        {/* ================= NOTES ================= */}
         <Input
           label="Catatan (wajib jika ditolak)"
           as="textarea"
@@ -109,9 +120,10 @@ const ValidationDetail = () => {
           onChange={(e) => setNotes(e.target.value)}
         />
 
-        {/* ================= ACTIONS ================= */}
         <div className="flex gap-2 pt-2">
-          <Button onClick={handleApprove} disabled={isFinal}>Approve</Button>
+          <Button onClick={handleApprove} disabled={isFinal}>
+            Approve
+          </Button>
           <Button variant="danger" onClick={handleReject} disabled={isFinal}>
             Reject
           </Button>

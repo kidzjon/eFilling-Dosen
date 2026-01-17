@@ -6,6 +6,7 @@ const MAX_SIZE = 10 * 1024 * 1024;
 const ALLOWED_TYPES = ["application/pdf", "image/png", "image/jpeg"];
 
 export function validateFile(file) {
+  if (!file) throw new Error("File is required");
   if (!ALLOWED_TYPES.includes(file.type)) {
     throw new Error("File type not allowed");
   }
@@ -14,20 +15,25 @@ export function validateFile(file) {
   }
 }
 
+function safeFileName(name) {
+  return `${Date.now()}_${String(name || "file").replace(/\s+/g, "_")}`;
+}
+
 export async function uploadSubmissionFile({ file, uid, submissionId }) {
   validateFile(file);
 
-  const path = `efilling/${uid}/${submissionId}/${file.name}`;
+  const filename = safeFileName(file.name);
+  const path = `efilling/${uid}/${submissionId}/${filename}`;
   const fileRef = ref(storage, path);
 
   await uploadBytes(fileRef, file);
-  const downloadUrl = await getDownloadURL(fileRef);
+  const url = await getDownloadURL(fileRef);
 
   return {
-    name: file.name,
+    name: filename,
     contentType: file.type,
     size: file.size,
     path,
-    downloadUrl,
+    url,
   };
 }

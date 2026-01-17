@@ -4,7 +4,7 @@ import { activityApi } from "../../api/activityApi";
 import { Button } from "../../components/Button";
 
 const badgeClass = (status) => {
-  switch (status) {
+  switch (String(status || "").toLowerCase()) {
     case "approved":
       return "badge badge-success badge-outline";
     case "rejected":
@@ -17,7 +17,6 @@ const badgeClass = (status) => {
 const DashboardAdmin = () => {
   const navigate = useNavigate();
 
-
   const [allActivities, setAllActivities] = useState([]);
   const [pendingActivities, setPendingActivities] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,9 +25,7 @@ const DashboardAdmin = () => {
     if (!value) return null;
 
     // Firestore Timestamp
-    if (value.seconds) {
-      return new Date(value.seconds * 1000);
-    }
+    if (value.seconds) return new Date(value.seconds * 1000);
 
     // ISO string / date string
     const d = new Date(value);
@@ -36,22 +33,17 @@ const DashboardAdmin = () => {
 
     return null;
   };
-  
+
   const normalizeStatus = (status) =>
-  String(status || "").toLowerCase().trim();
+    String(status || "")
+      .toLowerCase()
+      .trim();
 
-  const recentSubmissions = [...pendingActivities]
-  .sort((a,b) =>
-    normalizeTimestamp(b.createdAt) - normalizeTimestamp(a.createdAt)
-  )
-  .slice(0,5);
-
-
-  
   useEffect(() => {
     let mounted = true;
 
     const fetchData = async () => {
+      setLoading(true);
       try {
         const [all, pending] = await Promise.all([
           activityApi.getAllForAdmin(),
@@ -68,6 +60,8 @@ const DashboardAdmin = () => {
           setAllActivities([]);
           setPendingActivities([]);
         }
+      } finally {
+        if (mounted) setLoading(false);
       }
     };
 
@@ -75,48 +69,62 @@ const DashboardAdmin = () => {
     return () => (mounted = false);
   }, []);
 
-
-
-
+  const recentSubmissions = useMemo(() => {
+    return [...pendingActivities]
+      .sort(
+        (a, b) =>
+          (normalizeTimestamp(b.createdAt) || 0) -
+          (normalizeTimestamp(a.createdAt) || 0)
+      )
+      .slice(0, 5);
+  }, [pendingActivities]);
 
   const now = new Date();
   const sevenDaysAgo = new Date(now);
   sevenDaysAgo.setDate(now.getDate() - 7);
 
-  const approvedLast7Days = allActivities.filter(a => {
-    const status = normalizeStatus(a.status);
-    const d = normalizeTimestamp(a.updatedAt || a.createdAt);
-    return status === "approved" && d && d >= sevenDaysAgo;
-  }).length;
+  const approvedLast7Days = useMemo(() => {
+    return allActivities.filter((a) => {
+      const status = normalizeStatus(a.status);
+      const d = normalizeTimestamp(a.updatedAt || a.createdAt);
+      return status === "approved" && d && d >= sevenDaysAgo;
+    }).length;
+  }, [allActivities]);
 
-  const rejectedLast7Days = allActivities.filter(a => {
-    const status = normalizeStatus(a.status);
-    const d = normalizeTimestamp(a.updatedAt || a.createdAt);
-    return status === "rejected" && d && d >= sevenDaysAgo;
-  }).length;
+  const rejectedLast7Days = useMemo(() => {
+    return allActivities.filter((a) => {
+      const status = normalizeStatus(a.status);
+      const d = normalizeTimestamp(a.updatedAt || a.createdAt);
+      return status === "rejected" && d && d >= sevenDaysAgo;
+    }).length;
+  }, [allActivities]);
 
+  const totalLast7Days = useMemo(() => {
+    return allActivities.filter((a) => {
+      const d = normalizeTimestamp(a.createdAt);
+      return d && d >= sevenDaysAgo && d <= now;
+    }).length;
+  }, [allActivities]);
 
-
-  const totalLast7Days = allActivities.filter((a) => {
-    const d = normalizeTimestamp(a.createdAt);
-    return d && d >= sevenDaysAgo && d <= now;
-  }).length;
-
-
-
-  const stats = useMemo(() => ({
-    pending: allActivities.filter(
-      a => normalizeStatus(a.status) === "pending"
-    ).length,
-
-    approvedLast7Days,
-    rejectedLast7Days,
-    totalLast7Days,
-    recentQueue: allActivities.slice(0, 5).length,
-    notes: "Data bersifat sementara dan akan diperbarui otomatis.",
-  }), [allActivities, approvedLast7Days, rejectedLast7Days, totalLast7Days]);
-
-
+  const stats = useMemo(
+    () => ({
+      pending: allActivities.filter(
+        (a) => normalizeStatus(a.status) === "pending"
+      ).length,
+      approvedLast7Days,
+      rejectedLast7Days,
+      totalLast7Days,
+      recentQueue: recentSubmissions.length,
+      notes: "Data diperbarui otomatis berdasarkan aktivitas terbaru.",
+    }),
+    [
+      allActivities,
+      approvedLast7Days,
+      rejectedLast7Days,
+      totalLast7Days,
+      recentSubmissions.length,
+    ]
+  );
 
   const CATEGORY_LABEL = {
     education: "Pendidikan",
@@ -131,17 +139,14 @@ const DashboardAdmin = () => {
 
     const v = raw.toLowerCase().trim();
 
-    if (
-      v === "" ||
-      v === "lainnya" ||
-      v === "other" ||
-      v === "-"
-    ) {
+    if (v === "" || v === "lainnya" || v === "other" || v === "-")
       return "other";
-    }
 
+    // kalau data kamu sudah pakai label lengkap (contoh: "Penelitian"),
+    // tetap aman karena kita pakai key sesuai input.
     return v;
   };
+
   const categoryStats = useMemo(() => {
     const map = {};
 
@@ -158,10 +163,6 @@ const DashboardAdmin = () => {
       percent: total ? Math.round((count / total) * 100) : 0,
     }));
   }, [pendingActivities]);
-
-
-
-
 
   return (
     <div className="space-y-6">
@@ -195,25 +196,72 @@ const DashboardAdmin = () => {
         </div>
 
         <div className="stat">
-          <div className="stat-title text-gray-600">Disetujui (7 Hari Terakhir)</div>
-          <div className="stat-value text-success">{stats.approvedLast7Days}</div>
+          <div className="stat-title text-gray-600">
+            Disetujui (7 Hari Terakhir)
+          </div>
+          <div className="stat-value text-success">
+            {stats.approvedLast7Days}
+          </div>
           <div className="stat-desc text-gray-500">
             Keputusan approve 7 hari terakhir
           </div>
         </div>
 
         <div className="stat">
-          <div className="stat-title text-gray-600">Ditolak (7 Hari Terakhir)</div>
-          <div className="stat-value text-danger">{stats.rejectedLast7Days}</div>
-          <div className="stat-desc text-gray-500">
-            Keputusan reject 7 hari terakhir 
+          <div className="stat-title text-gray-600">
+            Ditolak (7 Hari Terakhir)
           </div>
-        </div>  
+          <div className="stat-value text-danger">
+            {stats.rejectedLast7Days}
+          </div>
+          <div className="stat-desc text-gray-500">
+            Keputusan reject 7 hari terakhir
+          </div>
+        </div>
 
         <div className="stat">
-          <div className="stat-title text-gray-600">Total Masuk (7 Hari Terakhir)</div>
+          <div className="stat-title text-gray-600">
+            Total Masuk (7 Hari Terakhir)
+          </div>
           <div className="stat-value text-primary">{stats.totalLast7Days}</div>
-          <div className="stat-desc text-gray-500">Total submit (dummy)</div>
+          <div className="stat-desc text-gray-500">
+            Jumlah pengajuan 7 hari terakhir
+          </div>
+        </div>
+      </div>
+
+      {/* ================= KATEGORI TERBANYAK ================= */}
+      <div className="stats bg-white shadow rounded-xl w-full">
+        <div className="stat">
+          <div className="stat-title text-gray-600">
+            Kategori Terbanyak (Pending)
+          </div>
+
+          {loading ? (
+            <div className="mt-2 text-sm text-gray-500">Memuat...</div>
+          ) : categoryStats.length === 0 ? (
+            <div className="mt-2 text-sm text-gray-500">
+              Belum ada data pending
+            </div>
+          ) : (
+            <div className="mt-3 space-y-3">
+              {categoryStats
+                .sort((a, b) => b.count - a.count)
+                .map((c) => (
+                  <div key={c.key}>
+                    <div className="flex items-center justify-between text-sm">
+                      <span>{CATEGORY_LABEL[c.key] || c.key}</span>
+                      <span className="badge badge-outline">{c.percent}%</span>
+                    </div>
+                    <progress
+                      className="progress progress-primary w-full"
+                      value={c.percent}
+                      max="100"
+                    />
+                  </div>
+                ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -238,12 +286,8 @@ const DashboardAdmin = () => {
           <div>
             <h3 className="font-semibold">Perhatian</h3>
             <p className="text-sm opacity-80">
-              Ada{" "}
-              <span className="font-semibold">
-                {stats.pending}
-              </span>{" "}
-              aktivitas pending yang sudah lebih dari 3 hari (dummy).
-              Prioritaskan review.
+              Ada <span className="font-semibold">{stats.pending}</span>{" "}
+              aktivitas pending. Prioritaskan review.
             </p>
           </div>
 
@@ -275,7 +319,7 @@ const DashboardAdmin = () => {
                 Antrian Terbaru
               </h2>
               <p className="text-sm text-gray-600">
-                Menampilkan {stats.recentQueue} data terbaru (dummy).
+                Menampilkan {stats.recentQueue} data terbaru.
               </p>
             </div>
 
@@ -305,13 +349,17 @@ const DashboardAdmin = () => {
               <tbody>
                 {recentSubmissions.map((row) => (
                   <tr key={row.id} className="hover">
-                    <td className="text-center">{row.dosenName}</td>
-                    <td className="text-center font-medium">{row.title}</td>
-                    <td className="text-center">{row.category}</td>
-                    <td className="text-center">{row.createdAt?.toDate
-                      ? row.createdAt.toDate().toLocaleDateString("id-ID")
-                      : "-"}</td>
-                    <td className="text-center">{row.sks}</td>
+                    <td className="text-center">{row.dosenName || "-"}</td>
+                    <td className="text-center font-medium">
+                      {row.title || "-"}
+                    </td>
+                    <td className="text-center">{row.category || "-"}</td>
+                    <td className="text-center">
+                      {row.createdAt?.toDate
+                        ? row.createdAt.toDate().toLocaleDateString("id-ID")
+                        : "-"}
+                    </td>
+                    <td className="text-center">{row.sks ?? 0}</td>
                     <td className="text-center">
                       <span className={badgeClass(row.status)}>
                         {row.status}
@@ -328,6 +376,17 @@ const DashboardAdmin = () => {
                     </td>
                   </tr>
                 ))}
+
+                {!loading && recentSubmissions.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      className="text-center text-sm text-gray-500 py-6"
+                    >
+                      Tidak ada antrian pending
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -340,75 +399,6 @@ const DashboardAdmin = () => {
                 <p className="text-sm opacity-80">{stats.notes}</p>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ================= QUICK MINI STATS (DUMMY) ================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="card bg-white shadow rounded-xl">
-          <div className="card-body">
-            <h3 className="font-semibold text-gray-800">
-              Performa Mingguan (Dummy)
-            </h3>
-            <p className="text-sm text-gray-600">
-              Validasi selesai: <span className="font-semibold">18</span>
-            </p>
-            <progress
-              className="progress progress-primary w-full mt-3"
-              value={75}
-              max="100"
-            />
-            <p className="text-xs text-gray-500 mt-2">
-              Target internal: 24 validasi/minggu
-            </p>
-          </div>
-        </div>
-
-        <div className="card bg-white shadow rounded-xl">
-          <div className="card-body">
-            <h3 className="font-semibold text-gray-800">
-              Rata-rata Waktu Review (Dummy)
-            </h3>
-            <div className="flex items-end gap-2 mt-2">
-              <div className="text-4xl font-bold text-primary">1.8</div>
-              <div className="text-sm text-gray-600 mb-1">hari</div>
-            </div>
-            <p className="text-xs text-gray-500 mt-2">
-              Semakin cepat semakin baik untuk dosen.
-            </p>
-          </div>
-        </div>
-
-        <div className="card bg-white shadow rounded-xl">
-          <div className="card-body">
-            <h3 className="font-semibold text-gray-800">
-              Kategori Terbanyak
-            </h3>
-
-            {categoryStats.length === 0 ? (
-              <p className="text-sm text-gray-500 mt-2">
-                Belum ada data aktivitas
-              </p>
-            ) : (
-              <div className="mt-3 space-y-3">
-                {categoryStats.map((c) => (
-                  <div key={c.key}>
-                    <div className="flex items-center justify-between text-sm">
-                      <span>{CATEGORY_LABEL[c.key] || c.key}</span>
-                      <span className="badge badge-outline">
-                        {c.percent}%
-                      </span>
-                    </div>
-                    <progress
-                      className="progress progress-primary w-full"
-                      value={c.percent}
-                      max="100"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       </div>

@@ -14,39 +14,96 @@ import {
 import { db } from "./firebase";
 import { uploadSubmissionFile } from "./storage.service";
 
-// NOTE:
-// Kita konsisten pakai collection "activities" (sesuai implementasi teman),
-// supaya semua flow (Tambah Kegiatan, Dashboard Dosen, Admin Validasi) nyambung.
-
 // ===============================
 // CREATE SUBMISSION (DOSEN)
 // ===============================
 export async function createSubmission({ data, file, uid }) {
   if (!file) throw new Error("File wajib diupload");
 
+  // auto year kalau belum ada
+  const derivedYear = data?.year
+    ? Number(data.year)
+    : data?.date
+    ? new Date(data.date).getFullYear()
+    : null;
+
   // 1) buat dokumen activity
-  const ref = await addDoc(collection(db, "activities"), {
+  const refDoc = await addDoc(collection(db, "activities"), {
     ...data,
-    dosenId: uid, // penting: dipakai getMySubmissions
+    year: derivedYear,
+    dosenId: uid,
     status: "pending",
+    reviewNotes: "",
+    reviewedBy: null,
+    reviewedAt: null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
 
-  // 2) upload file ke storage
+  // 2) upload file
   const fileMeta = await uploadSubmissionFile({
     file,
     uid,
-    submissionId: ref.id,
+    submissionId: refDoc.id,
   });
 
-  // 3) update dokumen dengan metadata file
-  await updateDoc(doc(db, "activities", ref.id), {
-    file: fileMeta,
+  // 3) update dokumen dengan attachment (standar)
+  await updateDoc(doc(db, "activities", refDoc.id), {
+    attachment: fileMeta,
+    // compat (optional): biar data lama yang baca `file.downloadUrl` tetap hidup
+    file: { ...fileMeta, downloadUrl: fileMeta.url },
     updatedAt: serverTimestamp(),
   });
 
-  return ref.id;
+  return refDoc.id;
+}
+
+// ===============================
+// UPDATE SUBMISSION (DOSEN)
+// - dipakai edit + ajukan ulang
+// ===============================
+export async function updateSubmission({ id, data, file, uid }) {
+  if (!id) throw new Error("Missing submission id");
+
+  const docRef = doc(db, "activities", id);
+
+  // auto year kalau belum ada
+  const derivedYear = data?.year
+    ? Number(data.year)
+    : data?.date
+    ? new Date(data.date).getFullYear()
+    : null;
+
+  // update fields dulu
+  await updateDoc(docRef, {
+    ...data,
+    year: derivedYear,
+    // setiap edit = ajukan ulang
+    status: "pending",
+    reviewNotes: "",
+    reviewedBy: null,
+    reviewedAt: null,
+    updatedAt: serverTimestamp(),
+    lastUpdatedBy: uid || null,
+  });
+
+  // kalau upload file baru
+  if (file) {
+    const fileMeta = await uploadSubmissionFile({
+      file,
+      uid: uid,
+      submissionId: id,
+    });
+
+    await updateDoc(docRef, {
+      attachment: fileMeta,
+      file: { ...fileMeta, downloadUrl: fileMeta.url }, // compat
+      updatedAt: serverTimestamp(),
+      lastUpdatedBy: uid || null,
+    });
+  }
+
+  return { success: true };
 }
 
 // ===============================
@@ -88,10 +145,7 @@ export async function getPendingSubmissions() {
 }
 
 export async function getAllActivitiesForAdmin() {
-  const q = query(
-    collection(db, "activities"),
-    orderBy("createdAt", "desc")
-  );
+  const q = query(collection(db, "activities"), orderBy("createdAt", "desc"));
 
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({
@@ -100,6 +154,18 @@ export async function getAllActivitiesForAdmin() {
   }));
 }
 
+// ===============================
+// GET ALL ACTIVITIES (PIMPINAN / READONLY)
+// ===============================
+export async function getAllActivitiesForPimpinan() {
+  const q = query(collection(db, "activities"), orderBy("createdAt", "desc"));
+
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+  }));
+}
 
 // ===============================
 // GET DETAIL SUBMISSION BY ID
@@ -138,7 +204,3 @@ export async function reviewSubmission({
 
   return { success: true };
 }
-
-
-
-

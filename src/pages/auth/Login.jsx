@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loginWithEmail, loginWithGoogle } from "@/services/auth.service";
 import { auth, db } from "@/services/firebase";
@@ -7,7 +7,13 @@ import { doc, getDoc } from "firebase/firestore";
 const Login = () => {
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
+
+  // modal error (samain style dengan Register)
+  const [errorOpen, setErrorOpen] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
   const navigate = useNavigate();
+  const modalId = useMemo(() => "login-error-modal", []);
 
   const handleChange = (key) => (e) => {
     setForm((prev) => ({ ...prev, [key]: e.target.value }));
@@ -26,14 +32,33 @@ const Login = () => {
     else navigate("/login");
   };
 
+  const openErrorModal = (message) => {
+    setErrorMsg(message || "Email atau password salah. Silakan coba lagi.");
+    setErrorOpen(true);
+  };
+
+  const closeErrorModal = () => {
+    setErrorOpen(false);
+    setErrorMsg("");
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg("");
+
     try {
       await loginWithEmail(form.email, form.password);
       await redirectByRole();
     } catch (err) {
-      alert(err.message);
+      // popup modal (bukan alert)
+      openErrorModal(
+        err?.code === "auth/invalid-credential" ||
+          err?.code === "auth/wrong-password" ||
+          err?.code === "auth/user-not-found"
+          ? "Email atau password salah. Silakan periksa kembali."
+          : err?.message || "Gagal login. Silakan coba lagi."
+      );
     } finally {
       setLoading(false);
     }
@@ -41,11 +66,13 @@ const Login = () => {
 
   const handleGoogleLogin = async () => {
     setLoading(true);
+    setErrorMsg("");
+
     try {
       await loginWithGoogle();
       await redirectByRole();
     } catch (err) {
-      alert(err.message);
+      openErrorModal(err?.message || "Gagal login dengan Google.");
     } finally {
       setLoading(false);
     }
@@ -65,10 +92,10 @@ const Login = () => {
                   type="button"
                   onClick={() => navigate("/login")}
                   className="
-                  flex-1 rounded-full py-2 text-sm font-semibold
-                  bg-white text-primary shadow
-                  transition-all
-                "
+                    flex-1 rounded-full py-2 text-sm font-semibold
+                    bg-white text-primary shadow
+                    transition-all
+                  "
                 >
                   Sign in
                 </button>
@@ -78,10 +105,10 @@ const Login = () => {
                   type="button"
                   onClick={() => navigate("/register")}
                   className="
-                  flex-1 rounded-full py-2 text-sm font-medium
-                  text-gray-500 hover:text-primary
-                  transition-all
-                "
+                    flex-1 rounded-full py-2 text-sm font-medium
+                    text-gray-500 hover:text-primary
+                    transition-all
+                  "
                 >
                   Sign up
                 </button>
@@ -125,6 +152,7 @@ const Login = () => {
                     value={form.email}
                     onChange={handleChange("email")}
                     required
+                    disabled={loading}
                   />
                 </label>
               </div>
@@ -157,6 +185,7 @@ const Login = () => {
                     value={form.password}
                     onChange={handleChange("password")}
                     required
+                    disabled={loading}
                   />
                 </label>
               </div>
@@ -227,6 +256,56 @@ const Login = () => {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* ================= MODAL ERROR (DaisyUI, sama seperti Register) ================= */}
+      <input
+        id={modalId}
+        type="checkbox"
+        className="modal-toggle"
+        checked={errorOpen}
+        onChange={(e) => setErrorOpen(e.target.checked)}
+      />
+      <div className="modal" role="dialog" aria-modal="true">
+        <div className="modal-box text-center max-w-sm">
+          {/* icon error (X merah) */}
+          <div className="flex justify-center">
+            <div className="w-14 h-14 rounded-full border-4 border-error flex items-center justify-center">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                className="w-8 h-8 text-error"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 6l12 12M18 6l-12 12"
+                />
+              </svg>
+            </div>
+          </div>
+
+          <h3 className="font-bold text-xl mt-4">Login Gagal</h3>
+          <p className="text-sm text-gray-600 mt-1">{errorMsg}</p>
+
+          <div className="modal-action justify-center mt-6">
+            <button className="btn btn-primary px-10" onClick={closeErrorModal}>
+              OK
+            </button>
+          </div>
+        </div>
+
+        {/* klik backdrop = tutup */}
+        <label
+          className="modal-backdrop"
+          htmlFor={modalId}
+          onClick={closeErrorModal}
+        >
+          Close
+        </label>
       </div>
     </div>
   );
